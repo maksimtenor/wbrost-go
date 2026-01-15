@@ -1,11 +1,17 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 // Views
-import Home from '@/views/Home.vue'
-import Login from '@/views/Login.vue'
-import Signup from '@/views/Signup.vue'
-import Info from '@/views/Info.vue'
-import Donation from '@/views/Donation.vue'
+import Home from '@/views/site/Home.vue'
+import Login from '@/views/site/Login.vue'
+import Signup from '@/views/site/Signup.vue'
+import Info from '@/views/site/Info.vue'
+import Donation from '@/views/site/Donation.vue'
+import Profile from '@/views/profile/Index.vue'
+import ApiKeys from '@/views/profile/ApiKeys.vue'
+import Carts from '@/views/profile/Carts.vue'
+import User from '@/views/user/Index.vue'
+import GetReports from '@/views/stat/GetReports.vue'
+import StatDetail from '@/views/stat/StatDetail.vue'
 
 const routes = [
     {
@@ -36,6 +42,42 @@ const routes = [
         path: '/donation',
         name: 'Donation',
         component: Donation,
+        meta: { guestOnly: true }
+    },
+    {
+        path: '/profile',
+        name: 'Profile',
+        component: Profile,
+        meta: { guestOnly: true }
+    },
+    {
+        path: '/profile/apikeys',
+        name: 'ApiKeys',
+        component: ApiKeys,
+        meta: { guestOnly: true }
+    },
+    {
+        path: '/profile/carts',
+        name: 'Carts',
+        component: Carts,
+        meta: { guestOnly: true }
+    },
+    {
+        path: '/user',
+        name: 'User',
+        component: User,
+        meta: { guestOnly: true }
+    },
+    {
+        path: '/stat/detail',
+        name: 'StatDetail',
+        component: StatDetail,
+        meta: { guestOnly: true }
+    },
+    {
+        path: '/stat/get-reports',
+        name: 'GetReports',
+        component: GetReports,
         meta: { guestOnly: true }
     },
     // Можно добавить catch-all маршрут в конце

@@ -4,14 +4,16 @@ import router from './router'
 import store from './store'
 
 // Импортируем стили
-import '@/assets/css/bootstrap-icons.css'
+// import '@/assets/css/bootstrap-icons.css'
 import '@/assets/css/v4-shims.css'
+import '@fortawesome/fontawesome-free/css/all.css'
 // import '@/assets/css/site.css'
 import '@/assets/css/landing/style.css'
 import '@/assets/css/landing/font/inter.css'
 import '@/assets/css/landing/main.min.css'
 import '@/assets/css/landing/main.min.rtl.css'
 import '@/assets/css/site.css'
+import '@/assets/css/adminlte.css'
 
 // Подключаем AdminLTE CSS (если есть отдельный файл)
 import '@/assets/css/adminlte.min.css'

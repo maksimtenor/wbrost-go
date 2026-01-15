@@ -58,13 +58,13 @@
               </a>
               <ul class="nav nav-treeview">
                 <li class="nav-item">
-                  <router-link to="/reports/stat-detail" class="nav-link">
-                    <i class="far fa-chart-pie nav-icon"></i>
+                  <router-link to="/stat/detail" class="nav-link">
+                    <i class="fas fa-chart-pie nav-icon"></i>
                     <p>Детальная статистика</p>
                   </router-link>
                 </li>
                 <li class="nav-item">
-                  <router-link to="/reports" class="nav-link">
+                  <router-link to="/stat/get-reports" class="nav-link">
                     <i class="fas fa-reply nav-icon"></i>
                     <p>Запросить отчет</p>
                   </router-link>
@@ -74,7 +74,7 @@
 
             <!-- Товары -->
             <li class="nav-item">
-              <router-link to="/reports/artlist" class="nav-link">
+              <router-link to="/profile/carts" class="nav-link">
                 <i class="nav-icon fas fa-list"></i>
                 <p>Товары</p>
               </router-link>
@@ -97,21 +97,21 @@
                   </router-link>
                 </li>
                 <li class="nav-item">
-                  <router-link to="/profile/mykeys" class="nav-link">
+                  <router-link to="/profile/ApiKeys" class="nav-link">
                     <i class="fas fa-key nav-icon"></i>
                     <p>Мои API ключи</p>
                   </router-link>
                 </li>
               </ul>
             </li>
-
+            <li class="nav-header">Прочее</li>
             <!-- Тариф -->
             <li class="nav-item">
               <a href="#" class="nav-link">
                 <i class="nav-icon fas fa-dashboard"></i>
                 <p>
                   Тариф
-                  <span class="right badge badge-danger">{{ user.proAccount || '' }}</span>
+                  <span class="right badge badge-danger">{{ user.proAccount || 'trial' }}</span>
                 </p>
               </a>
             </li>

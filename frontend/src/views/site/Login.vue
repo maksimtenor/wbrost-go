@@ -86,9 +86,9 @@ export default {
         // Временная заглушка для тестирования
         store.commit('SET_TOKEN', 'test-token')
         store.commit('SET_USER', {
-          name: 'Тестовый пользователь',
+          name: 'Тестовый k',
           username: 'test',
-          pro: 0,
+          pro_account: 'PRO',
           admin: 1
         })
         router.push('/')
