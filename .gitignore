@@ -1,0 +1,14 @@
+# Node.js
+node_modules/
+
+.idea/
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs
+*.log
+
+# Optional npm cache directory
+.npm

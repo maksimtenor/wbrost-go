@@ -1,0 +1,749 @@
+body {
+    /*font-size: 0.8rem !important;*/
+    font-size: 12px !important;
+    font-family: Arial !important;
+}
+.content-wrapper > .content {
+    padding: 0 2rem !important;
+}
+main > .container {
+    padding: 70px 15px 20px;
+}
+
+.footer {
+    background-color: #f5f5f5;
+    font-size: .9em;
+    height: 60px;
+}
+
+.footer > .container {
+    padding-right: 15px;
+    padding-left: 15px;
+}
+
+.not-set {
+    color: #c55;
+    font-style: italic;
+}
+
+/* add sorting icons to gridview sort links */
+a.asc:after, a.desc:after {
+    content: '';
+    left: 3px;
+    display: inline-block;
+    width: 0;
+    height: 0;
+    border: solid 5px transparent;
+    margin: 4px 4px 2px 4px;
+    background: transparent;
+}
+
+a.asc:after {
+    border-bottom: solid 7px #212529;
+    border-top-width: 0;
+}
+
+a.desc:after {
+    border-top: solid 7px #212529;
+    border-bottom-width: 0;
+}
+
+.grid-view th {
+    white-space: nowrap;
+}
+
+.hint-block {
+    display: block;
+    margin-top: 5px;
+    color: #999;
+}
+
+.error-summary {
+    color: #a94442;
+    background: #fdf7f7;
+    border-left: 3px solid #eed3d7;
+    padding: 10px 20px;
+    margin: 0 0 15px 0;
+}
+
+/* align the logout "link" (button in form) of the navbar */
+.nav li > form > button.logout {
+    padding-top: 7px;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+@media(max-width:767px) {
+    .nav li > form > button.logout {
+        display:block;
+        text-align: left;
+        width: 100%;
+        padding: 10px 0;
+    }
+}
+
+.nav > li > form > button.logout:focus,
+.nav > li > form > button.logout:hover {
+    text-decoration: none;
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.nav > li > form > button.logout:focus {
+    outline: none;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+div.required label.control-label:after{
+    content: " *";
+    color: red;
+}
+table.detail-view th {
+    width: 25%;
+}
+table.detail-view td {
+    width: 75%;
+}
+.button_paid_save,
+.button_paid_edit {
+    font-size: 16px;
+}
+/*.content-wrapper {*/
+/*    background-image: url("/web/img/content-wrapper.jpg");*/
+/*    background-size: 100% 100%;*/
+/*    backdrop-filter: blur(1.5rem);*/
+/*}*/
+
+/*----------------------------------------*/
+/*  09. Top Report CSS
+/*----------------------------------------*/
+/*-- Top Report One --*/
+.top-report {
+    padding: 30px;
+    -webkit-transition: all 0.3s ease 0s;
+    -o-transition: all 0.3s ease 0s;
+    transition: all 0.3s ease 0s;
+    position: relative;
+    z-index: 999;
+    background-color: #efefef;
+    /*-- Icon --*/
+    /*-- Head --*/
+    /*-- Content --*/
+    /*-- Footer --*/
+}
+
+.top-report .icon {
+    position: absolute;
+    right: 0;
+    top: 0;
+    z-index: -1;
+}
+
+.top-report .icon img {
+    max-width: 100%;
+}
+
+.top-report .head {
+    padding-right: 20px;
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.top-report .head h4 {
+    font-weight: 600;
+    color: #299fdb;
+    margin: 0;
+    line-height: 20px;
+}
+
+.top-report .head .view {
+    position: absolute;
+    right: 0;
+    top: 0;
+    color: #fb7da4;
+}
+
+.top-report .head .view i {
+    display: block;
+    font-size: 20px;
+    line-height: 1;
+}
+
+.top-report .content {
+    margin-bottom: 20px;
+}
+
+.top-report .content h5 {
+    color: #666666;
+    margin-bottom: 1px;
+}
+
+.top-report .content h2 {
+    color: #666666;
+    margin-bottom: 0;
+}
+
+.top-report .footer .progess {
+    margin-bottom: 8px;
+    display: block;
+    background-color: #eff8fe;
+    height: 4px;
+    width: 100%;
+}
+
+.top-report .footer .progess .progess-bar {
+    height: 100%;
+    background: #fb7da4;
+    background: -webkit-gradient(linear, left top, right top, from(#fb7da4), to(#fbaaa2));
+    background: -webkit-linear-gradient(left, #fb7da4 0%, #fbaaa2 100%);
+    background: -o-linear-gradient(left, #fb7da4 0%, #fbaaa2 100%);
+    background: linear-gradient(to right, #fb7da4 0%, #fbaaa2 100%);
+}
+
+@media only screen and (max-width: 479px) {
+    .top-report {
+        padding: 20px;
+    }
+}
+
+/*-- Top Report Two --*/
+.top-report-2 {
+    padding: 30px;
+    background: -webkit-gradient(linear, left top, right top, from(#ff9a9e), to(#fad0c4));
+    background: -webkit-linear-gradient(left, #ff9a9e 0%, #fad0c4 100%);
+    background: -o-linear-gradient(left, #ff9a9e 0%, #fad0c4 100%);
+    background: linear-gradient(to right, #ff9a9e 0%, #fad0c4 100%);
+    /*-- Head --*/
+    /*-- Content --*/
+    /*-- Footer --*/
+}
+
+.top-report-2 .head {
+    margin-bottom: 18px;
+}
+
+.top-report-2 .head h4 {
+    color: #ffffff;
+}
+
+.top-report-2 .head .view {
+    color: #ffffff;
+}
+
+.top-report-2 .content {
+    margin-bottom: 15px;
+}
+
+.top-report-2 .content h5 {
+    color: #ffffff;
+}
+
+.top-report-2 .content h2 {
+    color: #ffffff;
+}
+
+.top-report-2 .footer .progess {
+    background-color: #ffffff;
+}
+
+.top-report-2 .footer .progess .progess-bar {
+    height: 100%;
+    background: #fd427c;
+}
+
+.top-report-2 .footer p {
+    color: #ffffff;
+}
+
+@media only screen and (max-width: 479px) {
+    .top-report-2 {
+        padding: 20px;
+    }
+}
+.wbarticles {
+    margin-left: 10px;
+}
+.animateRotator{
+    position: absolute;
+    animation: spin 1s linear infinite !important;
+}
+@keyframes spin{
+    100%{
+        transform: rotate(360deg);
+    }
+}
+
+.table thead a {
+     color:#007bff !important;
+     text-decoration:none !important;
+}
+.text-left a {
+    color: #0c0c0d;
+    text-decoration:none !important;
+}
+/* Добавляем в конец существующего site.css */
+
+/* Стили для страниц авторизации */
+.login-page, .signup-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #4e4e4e !important;
+    background-position: center;
+    background-size: cover;
+}
+
+.login-page {
+    background-image: url('/img/1.png');
+    background-position: top;
+}
+
+.signup-page {
+    background-image: url('/img/1.png');
+    background-position: center;
+}
+
+.login-box, .signup-box {
+    width: 360px;
+}
+
+.login-logo, .signup-logo {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.login-card-body, .signup-card-body {
+    padding: 20px;
+}
+
+.login-box-msg, .signup-box-msg {
+    margin: 0;
+    text-align: center;
+    padding: 0 20px 20px;
+}
+
+/* Стили для форм */
+.form-group.has-feedback {
+    position: relative;
+}
+
+.form-control-feedback {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 2;
+    display: block;
+    width: 34px;
+    height: 34px;
+    line-height: 34px;
+    text-align: center;
+    pointer-events: none;
+}
+
+.help-block-error {
+    color: #dc3632 !important;
+    display: block;
+    margin-top: 5px;
+    font-size: 12px;
+}
+
+/* Стили для чекбокса согласия */
+#privacy_and_terms {
+    margin-top: 30px;
+    padding: 5px;
+}
+
+#privacy_and_terms label {
+    font-size: 12px;
+    cursor: pointer;
+}
+
+#privacy_and_terms a {
+    color: #007bff;
+    text-decoration: none;
+}
+
+#privacy_and_terms a:hover {
+    text-decoration: underline;
+}
+
+/* Стили для бокового меню */
+.telegram-links {
+    display: flex;
+    text-align: left;
+    border-bottom: 1px solid #4f5962;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    padding-left: 10%;
+    font-size: 12px;
+}
+
+.telegram-links p {
+    margin-bottom: 5px;
+}
+
+.telegram-links a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.telegram-links a:hover {
+    color: #299fdb;
+}
+
+/* Стили для приветствия гостей */
+#pricing {
+    overflow: hidden;
+}
+
+.text-5xl {
+    font-size: 3rem;
+}
+
+.text-body-emphasis {
+    color: #212529 !important;
+}
+
+.tracking-tight {
+    letter-spacing: -0.025em;
+}
+
+.text-body-secondary {
+    color: #6c757d !important;
+}
+
+.max-w-4xl {
+    max-width: 56rem;
+}
+
+.max-w-2xl {
+    max-width: 42rem;
+}
+
+/* Стили для графиков-заглушек */
+.chart-placeholder {
+    height: 300px;
+    background: #f5f5f5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+}
+/* Добавляем эти стили в site.css */
+
+/* Стили для Sidebar */
+.sidebar-bg {
+    background-image: url('/img/1.png');
+    background-position: inherit;
+}
+
+.sidebar-logo {
+    display: block;
+    padding-left: .8rem;
+    text-align: center;
+    margin-top: 15px;
+}
+
+.telegram-icon {
+    color: #299fdb;
+    margin-right: 10px;
+}
+
+/* Стили для форм регистрации */
+.signup-page .col-6,
+.login-page .col-4,
+.login-page .col-8 {
+    max-width: 100% !important;
+}
+
+/* Исправляем отступы */
+.mt-4 {
+    margin-top: 1.5rem !important;
+}
+
+/* Стили для кнопок в формах */
+.btn-block {
+    width: 100%;
+}
+
+/* ДОБАВЛЯЕМ ЭТИ СТИЛИ В КОНЕЦ site.css */
+
+/* Top Report CSS */
+.top-report {
+    padding: 30px;
+    -webkit-transition: all 0.3s ease 0s;
+    -o-transition: all 0.3s ease 0s;
+    transition: all 0.3s ease 0s;
+    position: relative;
+    z-index: 999;
+    background-color: #efefef;
+}
+
+.top-report .head {
+    padding-right: 20px;
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.top-report .head h4 {
+    font-weight: 600;
+    color: #299fdb;
+    margin: 0;
+    line-height: 20px;
+}
+
+.top-report .head .view {
+    position: absolute;
+    right: 0;
+    top: 0;
+    color: #fb7da4;
+}
+
+.top-report .head .view i {
+    display: block;
+    font-size: 20px;
+    line-height: 1;
+}
+
+.top-report .content {
+    margin-bottom: 20px;
+}
+
+.top-report .content h5 {
+    color: #666666;
+    margin-bottom: 1px;
+}
+
+.top-report .content h2 {
+    color: #666666;
+    margin-bottom: 0;
+    font-size: 2rem;
+}
+
+/* Bootstrap Grid System для col-xlg-3 */
+@media (min-width: 1200px) {
+    .col-xlg-3 {
+        flex: 0 0 25%;
+        max-width: 25%;
+    }
+    .py-xl-9 {
+        padding-top: .0rem !important;
+        padding-bottom: 10rem !important;
+    }
+}
+
+/* Отступы */
+.mb-30 {
+    margin-bottom: 30px !important;
+}
+
+.mt-4 {
+    margin-top: 1.5rem !important;
+}
+
+/* Стили для карточек графиков */
+.card {
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+    border: 1px solid rgba(0,0,0,.125);
+}
+
+.card-body {
+    padding: 1.25rem;
+}
+
+.card-title {
+    color: #299fdb;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+/* Стили для графиков */
+.chart-container {
+    position: relative;
+}
+
+/* Стили для хлебных крошек */
+.breadcrumb {
+    background-color: transparent;
+    padding: 0;
+    margin-bottom: 0;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+    content: "/";
+    padding: 0 0.5rem;
+}
+
+/* Контейнеры и сетка */
+.container-fluid {
+    width: 100%;
+    padding-right: 15px;
+    padding-left: 15px;
+    margin-right: auto;
+    margin-left: auto;
+}
+
+.row {
+    display: flex;
+    flex-wrap: wrap;
+    margin-right: -15px;
+    margin-left: -15px;
+}
+
+/* Колонки */
+.col-12 {
+    flex: 0 0 100%;
+    max-width: 100%;
+    padding-right: 15px;
+    padding-left: 15px;
+}
+
+.col-sm-6 {
+    flex: 0 0 50%;
+    max-width: 50%;
+    padding-right: 15px;
+    padding-left: 15px;
+}
+
+.col-md-3 {
+    flex: 0 0 25%;
+    max-width: 25%;
+    padding-right: 15px;
+    padding-left: 15px;
+}
+
+.col-lg-4 {
+    flex: 0 0 33.333333%;
+    max-width: 33.333333%;
+    padding-right: 15px;
+    padding-left: 15px;
+}
+
+.col-xlg-3 {
+    flex: 0 0 25%;
+    max-width: 25%;
+    padding-right: 15px;
+    padding-left: 15px;
+}
+
+/* Для мобильных */
+@media (max-width: 767px) {
+    .col-xlg-3, .col-md-3 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+
+    .col-lg-4, .col-md-6 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+}
+
+@media (max-width: 991px) {
+    .col-lg-4 {
+        flex: 0 0 100%;
+        max-width: 100%;
+        margin-bottom: 20px;
+    }
+}
+
+/* Утилитарные классы */
+.justify-content-around {
+    justify-content: space-around;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.float-sm-right {
+    float: right !important;
+}
+
+/* Заголовки */
+.m-0 {
+    margin: 0 !important;
+}
+
+.mt-2 {
+    margin-top: 0.5rem !important;
+}
+
+.mt-4 {
+    margin-top: 1.5rem !important;
+}
+
+/* Стили для гостевой страницы */
+.py-7 {
+    padding-top: 3rem !important;
+    padding-bottom: 3rem !important;
+}
+
+.py-sm-8 {
+    padding-top: 4rem !important;
+    padding-bottom: 4rem !important;
+}
+
+.py-xl-9 {
+    padding-top: .0rem !important;
+    padding-bottom: 10rem !important;
+}
+
+.text-5xl {
+    font-size: 3rem !important;
+}
+
+.text-body-emphasis {
+    color: #212529 !important;
+}
+
+.tracking-tight {
+    letter-spacing: -0.025em !important;
+}
+
+.fw-bold {
+    font-weight: 700 !important;
+}
+
+.text-lg {
+    font-size: 1.25rem !important;
+}
+
+.leading-8 {
+    line-height: 2rem !important;
+}
+
+.text-body-secondary {
+    color: #6c757d !important;
+}
+
+.mx-auto {
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+.max-w-4xl {
+    max-width: 56rem !important;
+}
+
+.max-w-2xl {
+    max-width: 42rem !important;
+}
+
+.overflow-hidden {
+    overflow: hidden !important;
+}
+
+/* Content Wrapper */
+.content-wrapper > .content {
+    padding: 0 2rem !important;
+}
+
+@media (max-width: 479px) {
+    .top-report {
+        padding: 20px;
+    }
+}
