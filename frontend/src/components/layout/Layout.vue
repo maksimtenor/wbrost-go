@@ -1,11 +1,9 @@
 <template>
   <div class="wrapper">
-    <Navbar />
-    <Sidebar />
+<!--    <Navbar />-->
+<!--    <Sidebar />-->
 
-    <div class="content-wrapper">
-      <router-view />
-    </div>
+    <router-view />
   </div>
 </template>
 

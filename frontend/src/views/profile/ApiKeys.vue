@@ -1,8 +1,14 @@
 <script setup>
 
+import Sidebar from "../../components/layout/Sidebar.vue";
+import Navbar from "../../components/layout/Navbar.vue";
 </script>
 
 <template>
+  <Navbar />
+  <!-- Main Sidebar Container -->
+  <Sidebar />
+  <div class="content-wrapper">
   <div class="content-header">
     <div class="container-fluid">
       <div class="row mb-2">
@@ -18,6 +24,7 @@
   <div class="content">
 
     <table id="w0" class="table table-striped table-bordered detail-view"><tbody><tr><th>Wildberries</th><td><span style="color:#008000;">Активен</span></td></tr></tbody></table><!-- /.container-fluid -->
+  </div>
   </div>
 </template>
 

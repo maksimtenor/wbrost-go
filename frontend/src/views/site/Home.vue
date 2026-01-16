@@ -1,11 +1,10 @@
 <template>
 <!--  <div class="wrapper hold-transition sidebar-mini">-->
     <!-- Navbar -->
-<!--    <Navbar />-->
-
+    <Navbar />
     <!-- Main Sidebar Container -->
-<!--    <Sidebar />-->
-
+    <Sidebar />
+  <div class="content-wrapper">
   <!-- Content Header -->
   <div class="content-header">
     <div class="container-fluid">
@@ -84,7 +83,7 @@
       </div>
     </div>
   </div>
-
+  </div>
     <!-- Main Footer -->
 <!--    <Footer />-->
 <!--  </div>-->

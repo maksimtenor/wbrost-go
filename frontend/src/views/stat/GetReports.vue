@@ -1,8 +1,14 @@
 <script setup>
 
+import Sidebar from "../../components/layout/Sidebar.vue";
+import Navbar from "../../components/layout/Navbar.vue";
 </script>
 
 <template>
+  <Navbar />
+  <!-- Main Sidebar Container -->
+  <Sidebar />
+  <div class="content-wrapper">
   <div class="content-header">
     <div class="container-fluid">
       <div class="row mb-2">
@@ -85,6 +91,7 @@
 
 
     <!-- /.container-fluid -->
+  </div>
   </div>
 </template>
 

@@ -1,11 +1,11 @@
-<template>
-  <footer class="main-footer">
+<!--<template>-->
+<!--  <footer class="main-footer">-->
 
-  </footer>
-</template>
+<!--  </footer>-->
+<!--</template>-->
 
-<script>
-export default {
-  name: 'Footer'
-}
-</script>
+<!--<script>-->
+<!--export default {-->
+<!--  name: 'Footer'-->
+<!--}-->
+<!--</script>-->

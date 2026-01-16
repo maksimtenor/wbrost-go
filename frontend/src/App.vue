@@ -1,10 +1,8 @@
 <template>
-  <div id="app">
-    <!-- Всегда показываем Layout для простоты -->
-    <Layout>
-      <router-view />
-    </Layout>
-  </div>
+  <!-- Всегда показываем Layout для простоты -->
+  <Layout>
+    <router-view />
+  </Layout>
 </template>
 
 <script>

@@ -1,10 +1,17 @@
 <script>
+import Sidebar from "../../components/layout/Sidebar.vue";
+import Navbar from "../../components/layout/Navbar.vue";
+
 export default {
-  name: "Info"
+  name: "Info",
+  components: {Navbar, Sidebar}
 }
 </script>
 
 <template>
+      <Navbar />
+      <Sidebar />
+  <div class="content-wrapper">
   <div class="content-header">
     <div class="container-fluid">
       <div class="row mb-2">
@@ -48,6 +55,7 @@ export default {
     <p><span style="color: green">Готово!</span> Теперь эти данные будут учитываться при расчёте статистик</p>
     <br>
     <h5 style="color: red">Так же, не забывайте добавлять налоговый % в вашем личном кабинете !</h5>
+  </div>
   </div>
 </template>
 

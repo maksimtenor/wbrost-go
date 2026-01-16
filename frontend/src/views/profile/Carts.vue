@@ -1,8 +1,13 @@
 <script setup>
 
+import Sidebar from "../../components/layout/Sidebar.vue";
 </script>
 
 <template>
+  <Navbar />
+  <!-- Main Sidebar Container -->
+  <Sidebar />
+  <div class="content-wrapper">
   <div class="content-header">
     <div class="container-fluid">
       <div class="row mb-2">
@@ -40,6 +45,7 @@
         </tbody></table>
       <nav id="w1"></nav></div><!--    --></div>
     <!-- /.container-fluid -->
+  </div>
   </div>
 </template>
 

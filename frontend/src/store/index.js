@@ -1,19 +1,11 @@
 import { createStore } from 'vuex'
-import axios from 'axios'
+import { authAPI } from '@/api/auth'
 
 export default createStore({
     state: {
         token: localStorage.getItem('token') || null,
-        user: JSON.parse(localStorage.getItem('user')) || null,
-        isAuthenticated: !!localStorage.getItem('token')
-    },
-    getters: {
-        isAuthenticated: state => state.isAuthenticated,
-        currentUser: state => state.user,
-        isAdmin: state => state.user ? state.user.admin === 1 : false,
-        proAccount: state => state.user ? state.user.pro_account : '',
-        usersCount: state => 0, // Заглушка
-        usersRealCount: state => 0 // Заглушка
+        user: null, // Начинаем с null, загрузим при инициализации
+        isAuthenticated: false // Начинаем с false
     },
     mutations: {
         SET_TOKEN(state, token) {
@@ -21,10 +13,8 @@ export default createStore({
             state.isAuthenticated = !!token
             if (token) {
                 localStorage.setItem('token', token)
-                axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
             } else {
                 localStorage.removeItem('token')
-                delete axios.defaults.headers.common['Authorization']
             }
         },
         SET_USER(state, user) {
@@ -34,27 +24,50 @@ export default createStore({
             } else {
                 localStorage.removeItem('user')
             }
+        },
+        LOGOUT(state) {
+            state.token = null
+            state.user = null
+            state.isAuthenticated = false
+            localStorage.removeItem('token')
+            localStorage.removeItem('user')
+            localStorage.removeItem('rememberMe')
+            localStorage.removeItem('savedUsername')
         }
     },
     actions: {
-        async login({ commit }, credentials) {
-            const response = await axios.post('/api/login', credentials)
-            commit('SET_TOKEN', response.data.token)
-            commit('SET_USER', response.data.user)
+        login({ commit }, { token, user }) {
+            commit('SET_TOKEN', token)
+            commit('SET_USER', user)
         },
-        async logout({ commit }) {
-            await axios.post('/api/logout')
-            commit('SET_TOKEN', null)
-            commit('SET_USER', null)
+        logout({ commit }) {
+            commit('LOGOUT')
+            authAPI.logout()
         },
-        async checkAuth({ commit }) {
+        // Загружает свежие данные пользователя с сервера
+        async loadUserData({ commit, state }) {
+            if (!state.token) return null
+
             try {
-                const response = await axios.get('/api/user')
-                commit('SET_USER', response.data)
+                const result = await authAPI.getFreshUserData()
+                if (result.success) {
+                    commit('SET_USER', result.data)
+                    return result.data
+                }
+                // Если токен невалидный
+                if (result.status === 401) {
+                    commit('LOGOUT')
+                }
+                return null
             } catch (error) {
-                commit('SET_TOKEN', null)
-                commit('SET_USER', null)
+                console.error('Failed to load user data:', error)
+                return null
             }
         }
+    },
+    getters: {
+        currentUser: state => state.user,
+        isAuthenticated: state => state.isAuthenticated,
+        isAdmin: state => state.user?.admin === 1
     }
 })

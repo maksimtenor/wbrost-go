@@ -18,7 +18,7 @@
         <div class="info">
           <span class="d-block">
             {{ userName }}
-            <span class="right badge badge-secondary">{{ user.typeAccount || 'гость' }}</span>
+            <span class="right badge badge-secondary">{{ userTypeAccount }}</span>
           </span>
         </div>
       </div>
@@ -111,7 +111,7 @@
                 <i class="nav-icon fas fa-dashboard"></i>
                 <p>
                   Тариф
-                  <span class="right badge badge-danger">{{ user.proAccount || 'trial' }}</span>
+                  <span class="right badge" :class="proBadgeClass">{{ proAccountText }}</span>
                 </p>
               </a>
             </li>
@@ -140,15 +140,58 @@
 </template>
 
 <script>
+import { mapState } from 'vuex'
+
 export default {
   name: 'Sidebar',
+
   computed: {
-    user() {
-      return this.$store.state.user ?? '' // Или откуда берётся пользователь
-    },
+    // Используем mapState для реактивной связи с store
+    ...mapState({
+      user: state => state.user,
+      isAuthenticated: state => state.isAuthenticated
+    }),
+
     userName() {
       if (!this.user) return ''
       return this.user.name || this.user.username || ''
+    },
+
+    proAccountText() {
+      if (!this.user || this.user.pro === undefined) return 'trial'
+      return this.user.pro === 1 ? 'PRO' : 'FREE'
+    },
+
+    proBadgeClass() {
+      if (!this.user || this.user.pro === undefined) return 'badge-secondary'
+      return this.user.pro === 1 ? 'badge-success' : 'badge-secondary'
+    },
+
+    userTypeAccount() {
+      if (!this.user) return 'гость'
+      if (this.user.admin === 1) return 'админ'
+      return this.proAccountText.toLowerCase()
+    }
+  },
+
+  // Добавляем хуки для обновления данных
+  mounted() {
+    // Если пользователь авторизован, обновляем данные при монтировании
+    if (this.isAuthenticated) {
+      this.$store.dispatch('loadUserData')
+    }
+  },
+
+  // Следим за изменениями маршрута
+  watch: {
+    $route() {
+      // При каждом переходе по страницам обновляем данные
+      if (this.isAuthenticated) {
+        // Делаем с небольшой задержкой чтобы не нагружать
+        setTimeout(() => {
+          this.$store.dispatch('loadUserData').catch(console.error)
+        }, 1000)
+      }
     }
   }
 }
