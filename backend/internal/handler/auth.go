@@ -75,10 +75,13 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		Token: tokenString,
 		User: UserResponse{
 			ID:        user.ID,
-			Name:      getStringFromNullString(user.Name),
+			Name:      getStringPtrFromNullString(user.Name),
 			Username:  user.Username,
-			Email:     getStringFromNullString(user.Email),
+			Email:     getStringPtrFromNullString(user.Email),
 			Pro:       user.Pro,
+			Taxes:     user.Taxes,
+			WbKey:     getStringPtrFromNullString(user.WbKey),
+			Phone:     getStringPtrFromNullString(user.Phone),
 			Admin:     user.Admin,
 			CreatedAt: user.CreatedAt,
 		},
@@ -143,7 +146,7 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 		Username:     req.Username,
 		Email:        req.Email,
 		PasswordHash: string(hashedPassword),
-		Pro:          0, // По умолчанию не PRO (0 вместо "FREE")
+		Pro:          1,
 		Admin:        0, // По умолчанию не админ
 	})
 
@@ -183,10 +186,13 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 		Token: tokenString,
 		User: UserResponse{
 			ID:        user.ID,
-			Name:      getStringFromNullString(user.Name),
+			Name:      getStringPtrFromNullString(user.Name),
 			Username:  user.Username,
-			Email:     getStringFromNullString(user.Email),
+			Email:     getStringPtrFromNullString(user.Email),
 			Pro:       user.Pro,
+			Taxes:     user.Taxes,
+			WbKey:     getStringPtrFromNullString(user.WbKey),
+			Phone:     getStringPtrFromNullString(user.Phone),
 			Admin:     user.Admin,
 			CreatedAt: user.CreatedAt,
 		},
@@ -204,11 +210,12 @@ func respondWithError(w http.ResponseWriter, code int, message string) {
 }
 
 // Helper функция для конвертации sql.NullString в string
-func getStringFromNullString(ns sql.NullString) string {
+func getStringPtrFromNullString(ns sql.NullString) *string {
 	if ns.Valid {
-		return ns.String
+		s := ns.String
+		return &s
 	}
-	return ""
+	return nil
 }
 
 // handler/auth.go
@@ -256,10 +263,13 @@ func (h *AuthHandler) GetCurrentUser(w http.ResponseWriter, r *http.Request) {
 	// Формируем ответ с текущими данными
 	response := UserResponse{
 		ID:        user.ID,
-		Name:      getStringFromNullString(user.Name),
+		Name:      getStringPtrFromNullString(user.Name),
 		Username:  user.Username,
-		Email:     getStringFromNullString(user.Email),
+		Email:     getStringPtrFromNullString(user.Email),
 		Pro:       user.Pro,
+		Taxes:     user.Taxes,
+		WbKey:     getStringPtrFromNullString(user.WbKey),
+		Phone:     getStringPtrFromNullString(user.Phone),
 		Admin:     user.Admin,
 		CreatedAt: user.CreatedAt,
 	}
