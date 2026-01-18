@@ -34,13 +34,15 @@ func main() {
 	authService := service.NewAuthService(userRepo)
 
 	// Создаем обработчики
-	authHandler := handler.NewAuthHandler(authService, cfg.JWTSecret)
+	authHandler := handler.NewAuthHandler(authService, userRepo, cfg.JWTSecret)
 
 	// Настраиваем маршруты
 	httpHandler := server.SetupRoutes(authHandler)
 
-	serverAddr := ":" + cfg.ServerPort // Добавляем двоеточие перед портом
+	serverAddr := ":" + cfg.ServerPort
 	log.Printf("Server starting on %s", serverAddr)
+
+	// Запускаем сервер
 	if err := http.ListenAndServe(serverAddr, httpHandler); err != nil {
 		log.Fatal("Server failed:", err)
 	}

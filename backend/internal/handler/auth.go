@@ -6,7 +6,9 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"wbrost-go/internal/repository"
 	"wbrost-go/internal/service"
+	"wbrost-go/internal/wbapi"
 
 	"github.com/golang-jwt/jwt/v4"
 	"golang.org/x/crypto/bcrypt"
@@ -14,12 +16,14 @@ import (
 
 type AuthHandler struct {
 	authService *service.AuthService
+	userRepo    *repository.UserRepository
 	jwtSecret   []byte
 }
 
-func NewAuthHandler(authService *service.AuthService, jwtSecret string) *AuthHandler {
+func NewAuthHandler(authService *service.AuthService, userRepo *repository.UserRepository, jwtSecret string) *AuthHandler {
 	return &AuthHandler{
 		authService: authService,
+		userRepo:    userRepo,
 		jwtSecret:   []byte(jwtSecret),
 	}
 }
@@ -277,4 +281,186 @@ func (h *AuthHandler) GetCurrentUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
+}
+
+func (h *AuthHandler) GetApiKeysStatus(w http.ResponseWriter, r *http.Request) {
+	// 1. Получаем токен из заголовка
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		respondWithJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "No authorization header"})
+		return
+	}
+
+	// 2. Извлекаем username из JWT (используем существующую логику как в GetCurrentUser)
+	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		return h.jwtSecret, nil
+	})
+
+	if err != nil || !token.Valid {
+		respondWithJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "Invalid token"})
+		return
+	}
+
+	// 3. Извлекаем username из токена
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		respondWithJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "Invalid token claims"})
+		return
+	}
+
+	username, ok := claims["username"].(string)
+	if !ok {
+		respondWithJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "Invalid username in token"})
+		return
+	}
+
+	// 4. Получаем пользователя через authService (не userRepo!)
+	user, err := h.authService.GetUserByUsername(username)
+	if err != nil {
+		respondWithJSON(w, http.StatusNotFound, ErrorResponse{Error: "User not found"})
+		return
+	}
+
+	// 5. Проверяем WB ключ
+	wbStatus := map[string]interface{}{
+		"has_token": user.WbKey.Valid && user.WbKey.String != "",
+		"active":    false,
+		"message":   "Не настроен",
+	}
+
+	if user.WbKey.Valid && user.WbKey.String != "" {
+		// СОЗДАЕМ WB КЛИЕНТ И ПРОВЕРЯЕМ ТОКЕН
+		wbClient := wbapi.NewWBClient(user.WbKey.String)
+		isValid, err := wbClient.CheckToken()
+
+		if err != nil {
+			// Ошибка при проверке (сеть, timeout и т.д.)
+			wbStatus["active"] = false
+			wbStatus["message"] = "Ошибка проверки: " + err.Error()
+		} else if isValid {
+			// Токен рабочий!
+			wbStatus["active"] = true
+			wbStatus["message"] = "Активен"
+		} else {
+			// Токен невалидный (WB API вернул ошибку)
+			wbStatus["active"] = false
+			wbStatus["message"] = "Токен недействителен"
+		}
+		//// Здесь будет проверка через WB API
+		//// Пока заглушка - всегда true
+		//wbStatus["active"] = true
+		//wbStatus["message"] = "Активен"
+	}
+
+	// 6. Возвращаем ответ
+	response := map[string]interface{}{
+		"wildberries": wbStatus,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+func (h *AuthHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
+	// 1. Проверяем авторизацию
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		respondWithJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "No authorization header"})
+		return
+	}
+
+	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		return h.jwtSecret, nil
+	})
+
+	if err != nil || !token.Valid {
+		respondWithJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "Invalid token"})
+		return
+	}
+
+	// 2. Получаем username из токена
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		respondWithJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "Invalid token claims"})
+		return
+	}
+
+	username, ok := claims["username"].(string)
+	if !ok {
+		respondWithJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "Invalid username in token"})
+		return
+	}
+
+	// 3. Получаем текущего пользователя
+	currentUser, err := h.authService.GetUserByUsername(username)
+	if err != nil {
+		respondWithJSON(w, http.StatusNotFound, ErrorResponse{Error: "User not found"})
+		return
+	}
+
+	// 4. Парсим данные из запроса
+	var updateData map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&updateData); err != nil {
+		respondWithJSON(w, http.StatusBadRequest, ErrorResponse{Error: "Invalid request body"})
+		return
+	}
+
+	// 5. Обновляем поля (только разрешенные)
+	if name, ok := updateData["name"].(string); ok && name != "" {
+		currentUser.Name = sql.NullString{String: name, Valid: true}
+	}
+
+	if email, ok := updateData["email"].(string); ok && email != "" {
+		currentUser.Email = sql.NullString{String: email, Valid: true}
+	}
+
+	if phone, ok := updateData["phone"].(string); ok {
+		currentUser.Phone = sql.NullString{String: phone, Valid: phone != ""}
+	}
+
+	if taxesStr, ok := updateData["taxes"].(float64); ok {
+		currentUser.Taxes = int(taxesStr)
+	}
+	// 6. Обновляем WB токен (если изменился)
+	if wbKey, ok := updateData["wb_key"].(string); ok {
+		currentUser.WbKey = sql.NullString{String: wbKey, Valid: wbKey != ""}
+	}
+
+	// 7. Обновляем пароль (если указан новый)
+	if password, ok := updateData["password"].(string); ok && password != "" {
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+		if err != nil {
+			respondWithJSON(w, http.StatusInternalServerError, ErrorResponse{Error: "Failed to hash password"})
+			return
+		}
+		currentUser.PasswordHash = string(hashedPassword)
+	}
+
+	// Замените пункт 8 в методе UpdateProfile:
+	// 8. Сохраняем в БД
+	err = h.userRepo.UpdateUser(currentUser)
+	if err != nil {
+		respondWithJSON(w, http.StatusInternalServerError, ErrorResponse{Error: "Failed to save user data: " + err.Error()})
+		return
+	}
+
+	// 9. Возвращаем успешный ответ
+	respondWithJSON(w, http.StatusOK, map[string]interface{}{
+		"success": true,
+		"message": "Profile updated successfully",
+	})
+}
+
+func GetReportsHandler(w http.ResponseWriter, r *http.Request) {
+	// Получаем список отчетов пользователя из БД
+	// ...
+}
+
+func RequestReportHandler(w http.ResponseWriter, r *http.Request) {
+	// Запрашиваем отчет у WB API
+	// 1. Получаем токен пользователя
+	// 2. Отправляем запрос к WB API (/api/v5/supplier/reportDetailByPeriod)
+	// 3. Сохраняем задачу в БД
+	// 4. Возвращаем ID задачи
 }

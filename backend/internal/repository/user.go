@@ -187,3 +187,80 @@ func (r *UserRepository) Create(user *User) (*User, error) {
 
 	return user, nil
 }
+
+func (r *UserRepository) GetByID(id int) (*User, error) {
+	query := `SELECT * FROM users WHERE id_user = $1`
+	row := r.db.QueryRow(query, id)
+
+	var user User
+	err := row.Scan(
+		&user.ID,
+		&user.Taxes,
+		&user.Username,
+		&user.PasswordHash,
+		&user.Email,
+		&user.Admin,
+		&user.Block,
+		&user.Pro,
+		&user.Name,
+		&user.Phone,
+		&user.WbKey,
+		&user.OzonKey,
+		&user.U2782212Wbrosus,
+		&user.OzonStatus,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+		&user.Del,
+		&user.LastLogin,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+func (r *UserRepository) UpdateUser(user *User) error {
+	query := `
+        UPDATE users 
+        SET 
+            name = $1,
+            email = $2,
+            phone = $3,
+            taxes = $4,
+            wb_key = $5,
+            password = $6,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id_user = $7
+    `
+
+	// Подготавливаем значения для NULL полей
+	nameValue := getNullStringValue(user.Name)
+	emailValue := getNullStringValue(user.Email)
+	phoneValue := getNullStringValue(user.Phone)
+	wbKeyValue := getNullStringValue(user.WbKey)
+
+	// Выполняем запрос
+	_, err := r.db.Exec(query,
+		nameValue,
+		emailValue,
+		phoneValue,
+		user.Taxes,
+		wbKeyValue,
+		user.PasswordHash,
+		user.ID,
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to update user: %w", err)
+	}
+
+	return nil
+}
+
+// Вспомогательная функция для работы с NULL
+func getNullStringValue(ns sql.NullString) interface{} {
+	if ns.Valid {
+		return ns.String
+	}
+	return nil
+}
