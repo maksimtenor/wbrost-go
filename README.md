@@ -4,19 +4,43 @@
 ```bash 
    cd .\frontend\
 ```
-2. Введите команду:
-```bash 
-   npm run dev
-```
-### Запуск Go|Golang или Бэкенд
 
+2. Установите пакеты:
+```bash
+    npm install (создаст папку node_modules в /frontend с пакетами)
+```
+
+3. Введите команду:
+```bash 
+   npm run dev (запуск Vue.js приложения для фронтенд части)
+```
+
+
+### Запуск Go|Golang или Бэкенд
 1. Перейдите в каталог: 
 ```bash 
    cd .\backend\
 ```
-2. Введите команду:
+
+2. Настройка конфиг скрытого файлв .env
+```bash
+Создайте в /backend/.env и заполните подключкением к бд(постгрес) и серверу(встроенный голанг), пример:
+# КОнфигурация базы данных
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=root
+DB_PASSWORD=1234
+DB_NAME=wbrost_go
+
+# КОнфигурация сервера
+SERVER_PORT=:8080
+```
+
+3. Введите команды:
 ```bash 
-   go run cmd/api/main.go
+   go mod tidy (устанавливает зависимости)
+   go run migrate.go (выполнит миграции в базу данных)
+   go run cmd/api/main.go (запуск сервера)
 ```
 
 ### Git - ведение версионности Semantic Versioning (SemVer)
