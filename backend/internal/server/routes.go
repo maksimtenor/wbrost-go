@@ -6,7 +6,7 @@ import (
 	"wbrost-go/internal/middleware"
 )
 
-func SetupRoutes(authHandler *handler.AuthHandler) http.Handler {
+func SetupRoutes(authHandler *handler.AuthHandler, wbStatsHandler *handler.WBStatsHandler) http.Handler {
 	mux := http.NewServeMux()
 
 	// Auth routes
@@ -15,15 +15,20 @@ func SetupRoutes(authHandler *handler.AuthHandler) http.Handler {
 
 	// Protected routes (require valid token)
 	mux.HandleFunc("/api/auth/me", authHandler.GetCurrentUser)
-
-	// Этот маршрут для проверки статуса API ключей
 	mux.HandleFunc("/api/profile/apikeys/status", authHandler.GetApiKeysStatus)
-
-	// Добавьте в SetupRoutes:
 	mux.HandleFunc("/api/profile/update", authHandler.UpdateProfile)
 
-	mux.HandleFunc("/api/reports", handler.GetReportsHandler)
-	mux.HandleFunc("/api/reports/request", handler.RequestReportHandler)
+	// WB Reports routes - ОБНОВЛЕНО!
+	mux.HandleFunc("/api/wb/stats", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			wbStatsHandler.GetWBStats(w, r)
+		case http.MethodPost:
+			wbStatsHandler.CreateWBReport(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
 
 	// Apply CORS middleware
 	handler := middleware.CORS(mux)

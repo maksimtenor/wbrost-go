@@ -29,15 +29,19 @@ func main() {
 	}
 	defer db.Close()
 
-	// Инициализируем репозиторий и сервис
+	// Инициализируем репозитории
 	userRepo := repository.NewUserRepository(db)
+	statsRepo := repository.NewWBStatsRepository(db)
+
+	// Инициализируем сервис
 	authService := service.NewAuthService(userRepo)
 
 	// Создаем обработчики
 	authHandler := handler.NewAuthHandler(authService, userRepo, cfg.JWTSecret)
+	wbStatsHandler := handler.NewWBStatsHandler(userRepo, statsRepo, cfg.JWTSecret)
 
 	// Настраиваем маршруты
-	httpHandler := server.SetupRoutes(authHandler)
+	httpHandler := server.SetupRoutes(authHandler, wbStatsHandler)
 
 	serverAddr := ":" + cfg.ServerPort
 	log.Printf("Server starting on %s", serverAddr)

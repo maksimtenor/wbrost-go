@@ -3,6 +3,7 @@ package handler
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -452,15 +453,30 @@ func (h *AuthHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func GetReportsHandler(w http.ResponseWriter, r *http.Request) {
-	// Получаем список отчетов пользователя из БД
-	// ...
-}
+func (h *AuthHandler) getUserFromRequest(r *http.Request) (*repository.User, error) {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		return nil, fmt.Errorf("no authorization header")
+	}
 
-func RequestReportHandler(w http.ResponseWriter, r *http.Request) {
-	// Запрашиваем отчет у WB API
-	// 1. Получаем токен пользователя
-	// 2. Отправляем запрос к WB API (/api/v5/supplier/reportDetailByPeriod)
-	// 3. Сохраняем задачу в БД
-	// 4. Возвращаем ID задачи
+	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		return h.jwtSecret, nil
+	})
+
+	if err != nil || !token.Valid {
+		return nil, fmt.Errorf("invalid token")
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, fmt.Errorf("invalid token claims")
+	}
+
+	username, ok := claims["username"].(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid username in token")
+	}
+
+	return h.authService.GetUserByUsername(username)
 }
