@@ -4,20 +4,22 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/golang-jwt/jwt/v4"
 	"net/http"
 	"strings"
 	"time"
+	"wbrost-go/internal/entity"
 	"wbrost-go/internal/repository"
+
+	"github.com/golang-jwt/jwt/v4"
 )
 
 type WBStatsHandler struct {
 	userRepo  *repository.UserRepository
-	statsRepo *repository.WBStatsRepository
+	statsRepo *repository.WBStatsGetRepository
 	jwtSecret []byte
 }
 
-func NewWBStatsHandler(userRepo *repository.UserRepository, statsRepo *repository.WBStatsRepository, jwtSecret string) *WBStatsHandler {
+func NewWBStatsHandler(userRepo *repository.UserRepository, statsRepo *repository.WBStatsGetRepository, jwtSecret string) *WBStatsHandler {
 	return &WBStatsHandler{
 		userRepo:  userRepo,
 		statsRepo: statsRepo,
@@ -25,23 +27,23 @@ func NewWBStatsHandler(userRepo *repository.UserRepository, statsRepo *repositor
 	}
 }
 
-// GetWBStats - GET /api/wb/stats
-func (h *WBStatsHandler) GetWBStats(w http.ResponseWriter, r *http.Request) {
-	// Get user from token
+// GetWBReports - GET /api/wb/stats | Получение списка репортов(заказов отчетов из бд)
+func (h *WBStatsHandler) GetWBReports(w http.ResponseWriter, r *http.Request) {
+	// Получить пользователя по токену
 	user, err := h.getUserFromRequest(r)
 	if err != nil {
-		respondWithJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "Unauthorized"})
+		respondWithJSON(w, http.StatusUnauthorized, entity.ErrorResponse{Error: "Unauthorized"})
 		return
 	}
 
-	// Get reports for this user
+	// Получить отчеты для этого пользователя
 	reports, err := h.statsRepo.GetByUserID(user.ID)
 	if err != nil {
-		respondWithJSON(w, http.StatusInternalServerError, ErrorResponse{Error: "Failed to get reports"})
+		respondWithJSON(w, http.StatusInternalServerError, entity.ErrorResponse{Error: "Failed to get reports"})
 		return
 	}
 
-	// Prepare response
+	// Подготовить ответ
 	response := make([]map[string]interface{}, len(reports))
 	for i, report := range reports {
 		response[i] = map[string]interface{}{
@@ -59,34 +61,34 @@ func (h *WBStatsHandler) GetWBStats(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, response)
 }
 
-// CreateWBReport - POST /api/wb/stats
+// CreateWBReport - POST /api/wb/stats | Заказать репорт (добавить запись с заказом в бд)
 func (h *WBStatsHandler) CreateWBReport(w http.ResponseWriter, r *http.Request) {
 	// Get user from token
 	user, err := h.getUserFromRequest(r)
 	if err != nil {
-		respondWithJSON(w, http.StatusUnauthorized, ErrorResponse{Error: "Unauthorized"})
+		respondWithJSON(w, http.StatusUnauthorized, entity.ErrorResponse{Error: "Unauthorized"})
 		return
 	}
 
-	// Parse request
+	// Парсим запрос
 	var req struct {
 		DateFrom string `json:"dateFrom"`
 		DateTo   string `json:"dateTo"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondWithJSON(w, http.StatusBadRequest, ErrorResponse{Error: "Invalid request body"})
+		respondWithJSON(w, http.StatusBadRequest, entity.ErrorResponse{Error: "Invalid request body"})
 		return
 	}
 
-	// Validate dates
+	// Валидация данных
 	if req.DateFrom == "" || req.DateTo == "" {
-		respondWithJSON(w, http.StatusBadRequest, ErrorResponse{Error: "DateFrom and DateTo are required"})
+		respondWithJSON(w, http.StatusBadRequest, entity.ErrorResponse{Error: "DateFrom and DateTo are required"})
 		return
 	}
 
-	// Create report in DB
-	stats := &repository.WBStatsGet{
+	// Создание репорта в бд
+	stats := &entity.WBStatsGet{ // Меняем repository.WBStatsGet на entity.WBStatsGet
 		UserID:   user.ID,
 		Status:   getNullInt64(0), // 0 = в обработке
 		DateFrom: req.DateFrom,
@@ -94,14 +96,14 @@ func (h *WBStatsHandler) CreateWBReport(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if err := h.statsRepo.Create(stats); err != nil {
-		respondWithJSON(w, http.StatusInternalServerError, ErrorResponse{Error: "Failed to create report: " + err.Error()})
+		respondWithJSON(w, http.StatusInternalServerError, entity.ErrorResponse{Error: "Failed to create report: " + err.Error()})
 		return
 	}
 
-	// Start async task to fetch data from WB API
+	// Запустите асинхронную задачу для получения данных из API WB.
 	//go h.fetchWBDataAsync(stats.ID, user, req.DateFrom, req.DateTo)
 
-	// Return success
+	// Вернуть "Успех"
 	respondWithJSON(w, http.StatusOK, map[string]interface{}{
 		"id":      stats.ID,
 		"success": true,
@@ -109,30 +111,30 @@ func (h *WBStatsHandler) CreateWBReport(w http.ResponseWriter, r *http.Request) 
 	})
 }
 
-// Async function to fetch data from WB
+// Асинхронная функция для получения данных из WB.
 func (h *WBStatsHandler) fetchWBDataAsync(reportID int, user *repository.User, dateFrom, dateTo string) {
-	// Here you would implement actual WB API call
-	// For now, simulate processing
+	// Здесь следует реализовать фактический вызов API WB
+	// Пока что, имитируем обработку
 
-	time.Sleep(2 * time.Second) // Simulate API call
+	time.Sleep(2 * time.Second) // Имитировать вызов API
 
-	// Update status to success
+	// Обновление статуса на "успех"
 	h.statsRepo.UpdateStatus(reportID, 1, "")
 
 	fmt.Printf("Report %d processed successfully for user %d\n", reportID, user.ID)
 }
 
-// Helper function to get user from JWT token
+// Вспомогательная функция для получения пользователя из JWT-токена.
 func (h *WBStatsHandler) getUserFromRequest(r *http.Request) (*repository.User, error) {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
 		return nil, fmt.Errorf("no authorization header")
 	}
 
-	// Extract token
+	// Извлечь токен
 	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 
-	// Parse JWT token
+	// Парсинг JWT-токена
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		return h.jwtSecret, nil
 	})
@@ -151,7 +153,7 @@ func (h *WBStatsHandler) getUserFromRequest(r *http.Request) (*repository.User, 
 		return nil, fmt.Errorf("invalid username in token")
 	}
 
-	// Get user from repository
+	// Получить пользователя из репозитория
 	return h.userRepo.GetByUsername(username)
 }
 

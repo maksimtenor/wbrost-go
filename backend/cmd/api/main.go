@@ -31,7 +31,7 @@ func main() {
 
 	// Инициализируем репозитории
 	userRepo := repository.NewUserRepository(db)
-	statsRepo := repository.NewWBStatsRepository(db)
+	statsRepo := repository.NewWBStatsGetRepository(db)
 
 	// Инициализируем сервис
 	authService := service.NewAuthService(userRepo)
