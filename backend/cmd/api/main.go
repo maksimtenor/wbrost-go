@@ -31,17 +31,21 @@ func main() {
 
 	// Инициализируем репозитории
 	userRepo := repository.NewUserRepository(db)
-	statsRepo := repository.NewWBStatsGetRepository(db)
+	wbStatsGetRepo := repository.NewWBStatsGetRepository(db)
+	statsRepo := repository.NewStatRepository(db, userRepo)
+	articlesGetRepo := repository.NewWBArticlesGetRepository(db)
+	articleRepo := repository.NewWBArticleRepository(db)
 
 	// Инициализируем сервис
 	authService := service.NewAuthService(userRepo)
 
 	// Создаем обработчики
 	authHandler := handler.NewAuthHandler(authService, userRepo, cfg.JWTSecret)
-	wbStatsHandler := handler.NewWBStatsHandler(userRepo, statsRepo, cfg.JWTSecret)
+	wbStatsHandler := handler.NewWBStatsHandler(userRepo, wbStatsGetRepo, statsRepo, cfg.JWTSecret)
+	wbArticlesHandler := handler.NewWBArticlesHandler(userRepo, articlesGetRepo, articleRepo, cfg.JWTSecret)
 
 	// Настраиваем маршруты
-	httpHandler := server.SetupRoutes(authHandler, wbStatsHandler)
+	httpHandler := server.SetupRoutes(authHandler, wbStatsHandler, wbArticlesHandler)
 
 	serverAddr := ":" + cfg.ServerPort
 	log.Printf("Server starting on %s", serverAddr)

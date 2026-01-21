@@ -6,7 +6,11 @@ import (
 	"wbrost-go/internal/middleware"
 )
 
-func SetupRoutes(authHandler *handler.AuthHandler, wbStatsHandler *handler.WBStatsHandler) http.Handler {
+func SetupRoutes(
+	authHandler *handler.AuthHandler,
+	wbStatsHandler *handler.WBStatsHandler,
+	wbArticlesHandler *handler.WBArticlesHandler,
+) http.Handler {
 	mux := http.NewServeMux()
 
 	// Авторизационные Роуты
@@ -25,6 +29,44 @@ func SetupRoutes(authHandler *handler.AuthHandler, wbStatsHandler *handler.WBSta
 			wbStatsHandler.GetWBReports(w, r)
 		case http.MethodPost:
 			wbStatsHandler.CreateWBReport(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	// Статистика Роуты
+	mux.HandleFunc("/api/stat/details", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			wbStatsHandler.GetStatDetail(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	// Карточки товаров Роуты
+	mux.HandleFunc("/api/articles", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			wbArticlesHandler.GetArticles(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	mux.HandleFunc("/api/articles/request", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			wbArticlesHandler.CreateArticlesRequest(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	mux.HandleFunc("/api/articles/cost-price", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			wbArticlesHandler.UpdateCostPrice(w, r)
 		default:
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}

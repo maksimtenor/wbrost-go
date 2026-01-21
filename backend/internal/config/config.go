@@ -18,7 +18,8 @@ type Config struct {
 }
 
 type WorkerConfig struct {
-	Interval int // Интервал в секундах
+	Interval         int // Интервал в секундах для статистики
+	ArticlesInterval int // Интервал в секундах для карточек товаров
 }
 
 func Load() *Config {
@@ -31,7 +32,8 @@ func Load() *Config {
 		ServerPort: getEnv("SERVER_PORT", "8080"),
 		JWTSecret:  getEnv("JWT_SECRET", "your-secret-key"),
 		Worker: WorkerConfig{
-			Interval: getEnvAsInt("WORKER_INTERVAL", 60), // по умолчанию 60 секунд
+			Interval:         getEnvAsInt("WORKER_INTERVAL", 60),          // по умолчанию 60 секунд
+			ArticlesInterval: getEnvAsInt("WORKER_ARTICLES_INTERVAL", 60), // по умолчанию 60 секунд
 		},
 	}
 }

@@ -1,89 +1,353 @@
 <script setup>
+import { ref, onMounted, computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import axios from 'axios'
+import Navbar from "../../components/layout/Navbar.vue"
+import Sidebar from "../../components/layout/Sidebar.vue"
 
-import Navbar from "../../components/layout/Navbar.vue";
-import Sidebar from "../../components/layout/Sidebar.vue";
+const route = useRoute()
+const router = useRouter()
+
+const statData = ref([])
+const loading = ref(false)
+const dateFrom = ref('2025-08-01')
+const dateTo = ref('2026-01-15')
+const error = ref('')
+const summary = ref({})
+const taxes = ref(5)
+
+// Пагинация
+const currentPage = ref(1)
+const pageSize = ref(20)
+const totalItems = ref(0)
+const totalPages = ref(0)
+
+// Вычисляемое свойство для отображения страниц
+const pagesArray = computed(() => {
+  const pages = []
+  const maxVisible = 5
+  let start = Math.max(1, currentPage.value - Math.floor(maxVisible / 2))
+  let end = Math.min(totalPages.value, start + maxVisible - 1)
+
+  if (end - start + 1 < maxVisible) {
+    start = Math.max(1, end - maxVisible + 1)
+  }
+
+  for (let i = start; i <= end; i++) {
+    pages.push(i)
+  }
+
+  return pages
+})
+
+const fetchStatDetails = async () => {
+  if (!localStorage.getItem('token')) {
+    router.push('/login')
+    return
+  }
+
+  try {
+    loading.value = true
+    error.value = ''
+
+    const token = localStorage.getItem('token')
+    if (!token) {
+      error.value = 'Необходима авторизация'
+      return
+    }
+
+    const response = await axios.get('/api/stat/details', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      params: {
+        dateFrom: dateFrom.value,
+        dateTo: dateTo.value,
+        page: currentPage.value,
+        pageSize: pageSize.value
+      }
+    })
+
+    statData.value = response.data.data || []
+    summary.value = response.data.summary || {}
+    taxes.value = response.data.taxes || 5
+
+    // Пагинация
+    if (response.data.pagination) {
+      currentPage.value = response.data.pagination.current_page
+      totalItems.value = response.data.pagination.total_items
+      totalPages.value = response.data.pagination.total_pages
+    }
+
+    if (statData.value.length === 0) {
+      error.value = 'Нет данных за выбранный период'
+    }
+
+  } catch (err) {
+    console.error('Error details:', err)
+    if (err.response?.data?.error) {
+      error.value = `Ошибка: ${err.response.data.error}`
+    } else if (err.message) {
+      error.value = `Ошибка сети: ${err.message}`
+    } else {
+      error.value = 'Ошибка загрузки статистики'
+    }
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleSubmit = (e) => {
+  e.preventDefault()
+  currentPage.value = 1 // Сбрасываем на первую страницу при новом поиске
+  fetchStatDetails()
+}
+
+const formatCurrency = (value) => {
+  if (value === null || value === undefined || value === '') return '₽ 0.00'
+  const num = typeof value === 'string' ? parseFloat(value) : value
+  return `₽ ${num.toFixed(2)}`
+}
+
+const formatNumber = (value) => {
+  if (value === null || value === undefined || value === '') return '0'
+  const num = typeof value === 'string' ? parseFloat(value) : value
+  return new Intl.NumberFormat('ru-RU').format(num)
+}
+
+// Навигация по страницам
+const goToPage = (page) => {
+  if (page < 1 || page > totalPages.value) return
+  currentPage.value = page
+  fetchStatDetails()
+}
+
+onMounted(() => {
+  if (route.query.dateFrom) dateFrom.value = route.query.dateFrom
+  if (route.query.dateTo) dateTo.value = route.query.dateTo
+  if (route.query.page) currentPage.value = parseInt(route.query.page) || 1
+
+  fetchStatDetails()
+})
 </script>
 
 <template>
   <Navbar />
-  <!-- Main Sidebar Container -->
   <Sidebar />
+
   <div class="content-wrapper">
-  <div class="content-header">
-    <div class="container-fluid">
-      <div class="row mb-2">
-        <div class="col-sm-6">
-          <h1 class="m-0">
-            Детальная статистика                    </h1>
-        </div><!-- /.col -->
-        <div class="col-sm-6">
-        </div><!-- /.col -->
-      </div><!-- /.row -->
-    </div><!-- /.container-fluid -->
-  </div>
-  <div class="content">
-    <div class="site-login" style="margin-left: 0px">
-
-      <form id="w0" action="/stat-detail" method="GET">
-        <input type="hidden" name="StatForm[dateFrom]" value="2025-08-01">
-        <input type="hidden" name="StatForm[dateTo]" value="2026-01-15">
-        <input type="hidden" name="get-detail-cart--button" value="">
-        <div class="form-group row field-statform-datefrom">
-          <label class="col-lg-1 control-label" for="statform-datefrom">Дата с</label>
-          <div class="col-lg-3"><div id="statform-datefrom-kvdate" class="input-group date"><div class="input-group-append"><span class="input-group-text kv-date-picker" title="Выбрать дату"><i class="fas fa-calendar-alt kv-dp-icon"></i></span></div> <input type="text" id="statform-datefrom" class="form-control krajee-datepicker" name="StatForm[dateFrom]" value="2025-08-01" placeholder="Выберите дату ..." data-datepicker-source="statform-datefrom-kvdate" data-datepicker-type="3" data-krajee-kvdatepicker="kvDatepicker_8596901a"></div></div>
-          <div class="col-lg-8"><div class="invalid-feedback "></div></div>
+    <div class="content-header">
+      <div class="container-fluid">
+        <div class="row mb-2">
+          <div class="col-sm-6">
+            <h1 class="m-0">Детальная статистика</h1>
+          </div>
+          <div class="col-sm-6 text-right">
+            <small v-if="statData.length > 0" class="text-muted">
+              Всего позиций: {{ formatNumber(totalItems) }}
+            </small>
+          </div>
         </div>
-        <div class="form-group row field-statform-dateto">
-          <label class="col-lg-1 control-label" for="statform-dateto">Дата по</label>
-          <div class="col-lg-3"><div id="statform-dateto-kvdate" class="input-group date"><div class="input-group-append"><span class="input-group-text kv-date-picker" title="Выбрать дату"><i class="fas fa-calendar-alt kv-dp-icon"></i></span></div> <input type="text" id="statform-dateto" class="form-control krajee-datepicker" name="StatForm[dateTo]" value="2026-01-15" placeholder="Выберите дату ..." data-datepicker-source="statform-dateto-kvdate" data-datepicker-type="3" data-krajee-kvdatepicker="kvDatepicker_8596901a"></div></div>
-          <div class="col-lg-8"><div class="invalid-feedback "></div></div>
-        </div>
-
-        <div class="form-group">
-          <div class="col-lg-offset-1 col-lg-11">
-            <button type="submit" class="btn btn-success" name="get-detail-cart--button">Показать</button>        </div>
-        </div>
-
-      </form>
-      <div id="content" class="output" style="overflow-y: auto">
-        <div id="w1" class="text-center" style="nax-width: 1800px;"><div class="summary">Показаны записи <b>1-4</b> из <b>4</b>.</div>
-          <table class="table table-striped table-bordered"><colgroup><col>
-            <col>
-            <col>
-            <col>
-            <col>
-            <col>
-            <col>
-            <col>
-            <col>
-            <col>
-            <col width="50px">
-            <col>
-            <col>
-            <col>
-            <col>
-            <col>
-            <col></colgroup>
-            <thead>
-            <tr><th>#</th><th>Фото</th><th><a href="/stat-detail?StatForm%5BdateFrom%5D=2025-08-01&amp;StatForm%5BdateTo%5D=2026-01-15&amp;get-detail-cart--button=&amp;sort=name" data-sort="name">Название</a></th><th><a href="/stat-detail?StatForm%5BdateFrom%5D=2025-08-01&amp;StatForm%5BdateTo%5D=2026-01-15&amp;get-detail-cart--button=&amp;sort=nm_id" data-sort="nm_id">Артикул</a></th><th><a href="/stat-detail?StatForm%5BdateFrom%5D=2025-08-01&amp;StatForm%5BdateTo%5D=2026-01-15&amp;get-detail-cart--button=&amp;sort=delivery_rub" data-sort="delivery_rub">Логистика</a></th><th>Логистика (средний на единицу товара)</th><th><a href="/stat-detail?StatForm%5BdateFrom%5D=2025-08-01&amp;StatForm%5BdateTo%5D=2026-01-15&amp;get-detail-cart--button=&amp;sort=deduction" data-sort="deduction">Прочие удержания</a></th><th><a href="/stat-detail?StatForm%5BdateFrom%5D=2025-08-01&amp;StatForm%5BdateTo%5D=2026-01-15&amp;get-detail-cart--button=&amp;sort=storage_fee" data-sort="storage_fee">Хранение</a></th><th><a href="/stat-detail?StatForm%5BdateFrom%5D=2025-08-01&amp;StatForm%5BdateTo%5D=2026-01-15&amp;get-detail-cart--button=&amp;sort=additional_payment" data-sort="additional_payment">Доплаты</a></th><th><a href="/stat-detail?StatForm%5BdateFrom%5D=2025-08-01&amp;StatForm%5BdateTo%5D=2026-01-15&amp;get-detail-cart--button=&amp;sort=penalty" data-sort="penalty">Штрафы</a></th><th><a href="/stat-detail?StatForm%5BdateFrom%5D=2025-08-01&amp;StatForm%5BdateTo%5D=2026-01-15&amp;get-detail-cart--button=&amp;sort=rebill_logistic_cost" data-sort="rebill_logistic_cost">Возмещение издержек по перевозке</a></th><th><a class="desc" href="/stat-detail?StatForm%5BdateFrom%5D=2025-08-01&amp;StatForm%5BdateTo%5D=2026-01-15&amp;get-detail-cart--button=&amp;sort=ppvz_for_pay" data-sort="ppvz_for_pay">Выручка</a></th><th>Налоги %</th><th>Продажи</th><th>Возвраты</th><th>Себестоимость</th><th><a class="desc" href="/stat-detail?StatForm%5BdateFrom%5D=2025-08-01&amp;StatForm%5BdateTo%5D=2026-01-15&amp;get-detail-cart--button=&amp;sort=ppvz_for_pay" data-sort="ppvz_for_pay">~ Чистая прибыль</a></th></tr><tr id="w1-filters" class="filters"><td>&nbsp;</td><td>&nbsp;</td><td><input type="text" class="form-control" name="Stat[name]"></td><td><input type="text" class="form-control" name="Stat[nm_id]"></td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
-            </thead>
-            <tfoot>
-            <tr><td><b>Итого:</b></td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>₽ 9160</td><td>&nbsp;</td><td>₽ 8383</td><td>₽ 190</td><td>₽ 0</td><td>₽ 0</td><td>₽ 0</td><td>₽ 31161</td><td>5 %</td><td>50 шт.</td><td>0 шт.</td><td>₽ 0</td><td>₽ 12756.6</td></tr>
-            </tfoot>
-            <tbody>
-            <tr data-key=""><td class="text-center">1</td><td class="text-center"><img src="https://basket-12.wbbasket.ru/vol1690/part169002/169002992/images/big/1.webp" alt="Фото" style="width: 150;height: 100px;"></td><td>Пельменница форма</td><td>169002992</td><td>2974.88</td><td>129.34</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0</td><td>16411.15</td><td>5</td><td>23</td><td>0</td><td>0</td><td>12764.46</td></tr>
-            <tr data-key=""><td class="text-center">2</td><td class="text-center"><img src="https://basket-16.wbbasket.ru/vol2412/part241208/241208047/images/big/1.webp" alt="Фото" style="width: 150;height: 100px;"></td><td>Толкушка для пюре металлическая</td><td>241208047</td><td>4232.83</td><td>184.04</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0</td><td>11975.71</td><td>5</td><td>23</td><td>0</td><td>0</td><td>7355.74</td></tr>
-            <tr data-key=""><td class="text-center">3</td><td class="text-center"><img src="https://basket-24.wbbasket.ru/vol4151/part415116/415116466/images/big/1.webp" alt="Фото" style="width: 150;height: 100px;"></td><td>Толкушка для пюре металлическая</td><td>415116466</td><td>1954.74</td><td>488.69</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0.00</td><td>0</td><td>2775.64</td><td>5</td><td>4</td><td>0</td><td>0</td><td>779.86</td></tr>
-            <tr data-key=""><td class="text-center">4</td><td class="text-center">Нет фото</td><td>Нет названия</td><td>0</td><td>0.00</td><td>0.00</td><td>8383.09</td><td>190.24</td><td>0.00</td><td>0.00</td><td>0</td><td>0</td><td>5</td><td>0</td><td>0</td><td>0</td><td>-8144.66</td></tr>
-            </tbody></table>
-          <nav id="w2"></nav></div>    </div>
-
+      </div>
     </div>
-    <!-- /.container-fluid -->
-  </div>
+
+    <div class="content">
+      <div class="container-fluid">
+        <!-- Форма фильтрации -->
+        <div class="card">
+          <div class="card-body">
+            <form @submit="handleSubmit" id="stat-filter-form">
+              <div class="row">
+                <div class="col-md-3">
+                  <div class="form-group">
+                    <label for="dateFrom">Дата с</label>
+                    <input
+                        type="date"
+                        v-model="dateFrom"
+                        class="form-control"
+                        id="dateFrom"
+                        required
+                    >
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="form-group">
+                    <label for="dateTo">Дата по</label>
+                    <input
+                        type="date"
+                        v-model="dateTo"
+                        class="form-control"
+                        id="dateTo"
+                        required
+                    >
+                  </div>
+                </div>
+                <div class="col-md-2">
+                  <div class="form-group">
+                    <label for="pageSize">Показывать</label>
+                    <select v-model="pageSize" class="form-control" id="pageSize">
+                      <option value="10">10</option>
+                      <option value="20">20</option>
+                      <option value="50">50</option>
+                      <option value="100">100</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="col-md-2 align-self-end">
+                  <button type="submit" class="btn btn-success" :disabled="loading">
+                    {{ loading ? 'Загрузка...' : 'Показать' }}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Сообщение об ошибке -->
+        <div v-if="error" class="alert alert-danger">
+          {{ error }}
+        </div>
+
+        <!-- Таблица статистики -->
+        <div class="card" v-if="!loading && statData.length > 0">
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-striped table-bordered">
+                <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Фото</th>
+                  <th>Название</th>
+                  <th>Артикул</th>
+                  <th>Логистика</th>
+                  <th>Логистика (средний на единицу товара)</th>
+                  <th>Прочие удержания</th>
+                  <th>Хранение</th>
+                  <th>Доплаты</th>
+                  <th>Штрафы</th>
+                  <th>Возмещение издержек по перевозке</th>
+                  <th>Выручка</th>
+                  <th>Налоги %</th>
+                  <th>Продажи</th>
+                  <th>Возвраты</th>
+                  <th>Себестоимость</th>
+                  <th>~ Чистая прибыль</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr v-for="(item, index) in statData" :key="item.nm_id">
+                  <td class="text-center">{{ formatNumber((currentPage - 1) * pageSize + index + 1) }}</td>
+                  <td class="text-center">
+                    <img
+                        v-if="item.photo && item.nm_id > 0"
+                        :src="item.photo"
+                        alt="Фото"
+                        style="width: 150px; height: 100px;"
+                        @error="e => e.target.style.display = 'none'"
+                    >
+                    <span v-else>Нет фото</span>
+                  </td>
+                  <td>{{ item.name || 'Нет названия' }}</td>
+                  <td>{{ item.nm_id }}</td>
+                  <td>{{ formatCurrency(item.delivery_rub) }}</td>
+                  <td>{{ formatCurrency(item.delivery_per_unit) }}</td>
+                  <td>{{ formatCurrency(item.deduction) }}</td>
+                  <td>{{ formatCurrency(item.storage_fee) }}</td>
+                  <td>{{ formatCurrency(item.additional_payment) }}</td>
+                  <td>{{ formatCurrency(item.penalty) }}</td>
+                  <td>{{ formatCurrency(item.rebill_logistic_cost) }}</td>
+                  <td>{{ formatCurrency(item.ppvz_for_pay) }}</td>
+                  <td>{{ taxes }} %</td>
+                  <td>{{ formatNumber(item.sales) }} шт. ({{ formatNumber(item.count_sales) }})</td>
+                  <td>{{ formatNumber(item.returns) }} шт. ({{ formatNumber(item.count_refund) }})</td>
+                  <td>{{ formatCurrency(0) }}</td>
+                  <td>{{ formatCurrency(item.net_profit) }}</td>
+                </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Пагинация -->
+            <nav v-if="totalPages > 1" class="mt-3">
+              <ul class="pagination justify-content-center">
+                <li class="page-item" :class="{ disabled: currentPage === 1 }">
+                  <a class="page-link" href="#" @click.prevent="goToPage(currentPage - 1)">
+                    &laquo;
+                  </a>
+                </li>
+
+                <li v-for="page in pagesArray" :key="page"
+                    class="page-item" :class="{ active: page === currentPage }">
+                  <a class="page-link" href="#" @click.prevent="goToPage(page)">
+                    {{ page }}
+                  </a>
+                </li>
+
+                <li class="page-item" :class="{ disabled: currentPage === totalPages }">
+                  <a class="page-link" href="#" @click.prevent="goToPage(currentPage + 1)">
+                    &raquo;
+                  </a>
+                </li>
+              </ul>
+            </nav>
+
+            <!-- Итоги -->
+            <div class="alert alert-info mt-3">
+              <h5>Итого за период:</h5>
+              <div class="row">
+                <div class="col-md-4">
+                  <p><strong>Общая выручка:</strong> {{ formatCurrency(summary.total_ppvz_for_pay) }}</p>
+                  <p><strong>Общая логистика:</strong> {{ formatCurrency(summary.total_delivery_rub) }}</p>
+                </div>
+                <div class="col-md-4">
+                  <p><strong>Продажи:</strong> {{ formatNumber(summary.total_count_sales) }} заказов,
+                    {{ formatNumber(summary.total_quantity) }} шт.</p>
+                  <p><strong>Возвраты:</strong> {{ formatNumber(summary.total_count_refund) }} заказов,
+                    {{ formatNumber(summary.total_return_amount) }} шт.</p>
+                </div>
+                <div class="col-md-4">
+                  <p><strong>Уникальных товаров:</strong> {{ formatNumber(summary.unique_products) }}</p>
+                  <p><strong>~ Чистая прибыль:</strong> {{ formatCurrency(summary.total_net_profit) }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Сообщение, если нет данных -->
+        <div v-if="!loading && statData.length === 0 && !error" class="alert alert-warning">
+          Нет данных за выбранный период
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
+.table-responsive {
+  overflow-x: auto;
+}
 
+.table img {
+  max-width: 150px;
+  max-height: 100px;
+  object-fit: contain;
+}
+
+.pagination {
+  margin-bottom: 0;
+}
+
+.page-item.active .page-link {
+  background-color: #28a745;
+  border-color: #28a745;
+}
+
+.page-link {
+  color: #28a745;
+}
+
+.page-link:hover {
+  color: #1e7e34;
+}
 </style>

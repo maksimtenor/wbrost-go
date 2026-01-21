@@ -1,54 +1,455 @@
 <script setup>
+import { ref, onMounted, computed, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import axios from 'axios'
+import Navbar from "../../components/layout/Navbar.vue"
+import Sidebar from "../../components/layout/Sidebar.vue"
 
-import Sidebar from "../../components/layout/Sidebar.vue";
+const router = useRouter()
+
+// Данные
+const articles = ref([])
+const loading = ref(false)
+const loadingRequest = ref(false)
+const error = ref('')
+const searchQuery = ref('')
+
+// Пагинация
+const currentPage = ref(1)
+const pageSize = ref(10)
+const totalItems = ref(0)
+const totalPages = ref(0)
+
+// Вычисляемое свойство для отображения страниц
+const pagesArray = computed(() => {
+  const pages = []
+  const maxVisible = 5
+  let start = Math.max(1, currentPage.value - Math.floor(maxVisible / 2))
+  let end = Math.min(totalPages.value, start + maxVisible - 1)
+
+  if (end - start + 1 < maxVisible) {
+    start = Math.max(1, end - maxVisible + 1)
+  }
+
+  for (let i = start; i <= end; i++) {
+    pages.push(i)
+  }
+
+  return pages
+})
+
+// Загрузка карточек товаров
+const fetchArticles = async () => {
+  if (!localStorage.getItem('token')) {
+    router.push('/login')
+    return
+  }
+
+  try {
+    loading.value = true
+    error.value = ''
+
+    const token = localStorage.getItem('token')
+    const response = await axios.get('/api/articles', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      params: {
+        page: currentPage.value,
+        pageSize: pageSize.value,
+        search: searchQuery.value || undefined
+      }
+    })
+
+    articles.value = response.data.data || []
+
+    // Пагинация
+    if (response.data.pagination) {
+      currentPage.value = response.data.pagination.current_page
+      totalItems.value = response.data.pagination.total_items
+      totalPages.value = response.data.pagination.total_pages
+    }
+
+    if (articles.value.length === 0) {
+      error.value = 'Нет данных'
+    }
+
+  } catch (err) {
+    console.error('Error fetching articles:', err)
+    if (err.response?.data?.error) {
+      error.value = `Ошибка: ${err.response.data.error}`
+    } else {
+      error.value = 'Ошибка загрузки данных'
+    }
+  } finally {
+    loading.value = false
+  }
+}
+
+// Запрос обновления карточек
+const requestArticlesUpdate = async () => {
+  if (!localStorage.getItem('token')) {
+    router.push('/login')
+    return
+  }
+
+  try {
+    loadingRequest.value = true
+    const token = localStorage.getItem('token')
+
+    const response = await axios.post('/api/articles/request',
+        {},
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+    )
+
+    if (response.data.success) {
+      alert('✅ Запрос на обновление карточек поставлен в очередь')
+    }
+  } catch (err) {
+    console.error('Error requesting articles update:', err)
+    if (err.response?.data?.error) {
+      alert(`❌ Ошибка: ${err.response.data.error}`)
+    } else {
+      alert('❌ Ошибка отправки запроса')
+    }
+  } finally {
+    loadingRequest.value = false
+  }
+}
+
+// Обновление себестоимости
+const updateCostPrice = async (articule, costPrice) => {
+  if (!localStorage.getItem('token')) {
+    router.push('/login')
+    return
+  }
+
+  try {
+    const token = localStorage.getItem('token')
+
+    await axios.post('/api/articles/cost-price',
+        {
+          articule: articule,
+          cost_price: costPrice
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+    )
+
+    // Обновляем данные на странице
+    const article = articles.value.find(a => a.articule === articule)
+    if (article) {
+      article.cost_price = costPrice
+    }
+
+  } catch (err) {
+    console.error('Error updating cost price:', err)
+    if (err.response?.data?.error) {
+      alert(`❌ Ошибка: ${err.response.data.error}`)
+    } else {
+      alert('❌ Ошибка обновления себестоимости')
+    }
+  }
+}
+
+// Обработчики для редактирования себестоимости
+const startEditCostPrice = (articule) => {
+  const article = articles.value.find(a => a.articule === articule)
+  if (article) {
+    article.editingCostPrice = true
+    article.tempCostPrice = article.cost_price || ''
+  }
+}
+
+const saveCostPrice = (articule) => {
+  const article = articles.value.find(a => a.articule === articule)
+  if (article && article.tempCostPrice !== undefined) {
+    updateCostPrice(articule, article.tempCostPrice)
+    article.editingCostPrice = false
+    delete article.tempCostPrice
+  }
+}
+
+const cancelEditCostPrice = (articule) => {
+  const article = articles.value.find(a => a.articule === articule)
+  if (article) {
+    article.editingCostPrice = false
+    delete article.tempCostPrice
+  }
+}
+
+// Навигация по страницам
+const goToPage = (page) => {
+  if (page < 1 || page > totalPages.value) return
+  currentPage.value = page
+  fetchArticles()
+}
+
+// Поиск
+const handleSearch = () => {
+  currentPage.value = 1
+  fetchArticles()
+}
+
+// Форматирование даты
+const formatDate = (dateString) => {
+  if (!dateString) return 'Нет данных'
+  const date = new Date(dateString)
+  return date.toLocaleDateString('ru-RU')
+}
+
+// Форматирование цены
+const formatPrice = (price) => {
+  if (!price || price === 'Не указана' || price === '0') return 'Не указана'
+  return `${price} ₽`
+}
+
+onMounted(() => {
+  fetchArticles()
+})
+
+// Наблюдаем за изменениями pageSize
+watch(pageSize, () => {
+  currentPage.value = 1
+  fetchArticles()
+})
 </script>
 
 <template>
   <Navbar />
-  <!-- Main Sidebar Container -->
   <Sidebar />
+
   <div class="content-wrapper">
-  <div class="content-header">
-    <div class="container-fluid">
-      <div class="row mb-2">
-        <div class="col-sm-6">
-          <h1 class="m-0">
-            Товары                    </h1>
-        </div><!-- /.col -->
-        <div class="col-sm-6">
-        </div><!-- /.col -->
-      </div><!-- /.row -->
-    </div><!-- /.container-fluid -->
-  </div>
-  <div class="content">
+    <div class="content-header">
+      <div class="container-fluid">
+        <div class="row mb-2">
+          <div class="col-sm-6">
+            <h1 class="m-0">Товары</h1>
+          </div>
+          <div class="col-sm-6 text-right">
+            <button
+                class="btn btn-success"
+                @click="requestArticlesUpdate"
+                :disabled="loadingRequest"
+            >
+              <span v-if="loadingRequest" class="spinner-border spinner-border-sm"></span>
+              {{ loadingRequest ? 'Загрузка...' : 'Обновить карточки' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
 
-<!--    <script src="https://code.jquery.com/jquery-3.7.1.js" integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4=" crossorigin="anonymous"></script>-->
+    <div class="content">
+      <div class="container-fluid">
+        <!-- Панель поиска и фильтров -->
+        <div class="card">
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6">
+                <div class="input-group">
+                  <input
+                      type="text"
+                      v-model="searchQuery"
+                      class="form-control"
+                      placeholder="Поиск по названию или артикулу"
+                      @keyup.enter="handleSearch"
+                  >
+                  <div class="input-group-append">
+                    <button class="btn btn-primary" @click="handleSearch">
+                      <i class="fas fa-search"></i> Найти
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <select v-model="pageSize" class="form-control">
+                  <option value="10">10 на странице</option>
+                  <option value="20">20 на странице</option>
+                  <option value="50">50 на странице</option>
+                  <option value="100">100 на странице</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
 
-    <div>
-      <!--    <h2 style="font-size: 18px;">Запросить у WB обновление: <a href="--><!--"-->
-      <!--                                                               class="bi bi-arrow-clockwise bold"></a></h2>-->
-      <h2 style="font-size: 18px;">Запросить у WB обновление: <span class="bi bi-arrow-clockwise bold wbarticles " style="color: green; cursor: pointer; transform-origin: center;" ;=""></span></h2>
-      <!--    -->    <div id="w0" class="grid-view"><div class="summary">Показаны записи <b>1-9</b> из <b>9</b>.</div>
-      <table class="table table-striped table-bordered"><thead>
-      <tr><th>#</th><th>Фото</th><th><a href="/artlist?sort=articule" data-sort="articule">Артикул</a></th><th><a class="asc" href="/artlist?sort=-name" data-sort="-name">Название</a></th><th><a href="/artlist?sort=created" data-sort="created">Создан</a></th><th><a href="/artlist?sort=updated" data-sort="updated">Последнее обновление</a></th><th><a href="/artlist?sort=cost_price" data-sort="cost_price">Себестоимость</a></th><th>Действие</th></tr><tr id="w0-filters" class="filters"><td>&nbsp;</td><td>&nbsp;</td><td><input type="text" class="form-control" name="WbArticles[articule]"></td><td><input type="text" class="form-control" name="WbArticles[name]"></td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
-      </thead>
-        <tbody>
-        <tr data-key="17864"><td class="text-center">1</td><td class="text-center"><img src="https://basket-12.wbbasket.ru/vol1716/part171664/171664145/images/big/1.webp" alt="Фото" style="width: 150;height: 100px;"></td><td class="articule">171664145</td><td>Контейнер для заморозки и хранения пельменей с крышкой</td><td>2023-08-03</td><td>2024-03-24</td><td class="paid">Не указана</td><td class="text-center"><a class="fa fa-floppy-o mr-auto button_paid_save" style="cursor: pointer;"></a><a class="bi bi-pencil-square mr-auto button_paid_edit" style="margin-left: 5px; cursor: pointer;"></a></td></tr>
-        <tr data-key="17859"><td class="text-center">2</td><td class="text-center"><img src="https://basket-12.wbbasket.ru/vol1716/part171663/171663433/images/big/1.webp" alt="Фото" style="width: 150;height: 100px;"></td><td class="articule">171663433</td><td>Контейнер для заморозки и хранения с крышкой 1 ярус</td><td>2023-08-03</td><td>2024-11-11</td><td class="paid">Не указана</td><td class="text-center"><a class="fa fa-floppy-o mr-auto button_paid_save" style="cursor: pointer;"></a><a class="bi bi-pencil-square mr-auto button_paid_edit" style="margin-left: 5px; cursor: pointer;"></a></td></tr>
-        <tr data-key="17860"><td class="text-center">3</td><td class="text-center"><img src="https://basket-15.wbbasket.ru/vol2191/part219144/219144904/images/big/1.webp" alt="Фото" style="width: 150;height: 100px;"></td><td class="articule">219144904</td><td>Мешки для робота пылесоса многоразовые</td><td>2024-03-22</td><td>2024-10-10</td><td class="paid">Не указана</td><td class="text-center"><a class="fa fa-floppy-o mr-auto button_paid_save" style="cursor: pointer;"></a><a class="bi bi-pencil-square mr-auto button_paid_edit" style="margin-left: 5px; cursor: pointer;"></a></td></tr>
-        <tr data-key="17861"><td class="text-center">4</td><td class="text-center"><img src="https://basket-12.wbbasket.ru/vol1795/part179522/179522388/images/big/1.webp" alt="Фото" style="width: 150;height: 100px;"></td><td class="articule">179522388</td><td>Мешки для робота пылесоса многоразовые</td><td>2023-09-30</td><td>2024-10-10</td><td class="paid">Не указана</td><td class="text-center"><a class="fa fa-floppy-o mr-auto button_paid_save" style="cursor: pointer;"></a><a class="bi bi-pencil-square mr-auto button_paid_edit" style="margin-left: 5px; cursor: pointer;"></a></td></tr>
-        <tr data-key="17862"><td class="text-center">5</td><td class="text-center"><img src="https://basket-15.wbbasket.ru/vol2191/part219144/219144905/images/big/1.webp" alt="Фото" style="width: 150;height: 100px;"></td><td class="articule">219144905</td><td>Мешки для робота пылесоса многоразовые</td><td>2024-03-22</td><td>2024-10-10</td><td class="paid">Не указана</td><td class="text-center"><a class="fa fa-floppy-o mr-auto button_paid_save" style="cursor: pointer;"></a><a class="bi bi-pencil-square mr-auto button_paid_edit" style="margin-left: 5px; cursor: pointer;"></a></td></tr>
-        <tr data-key="17863"><td class="text-center">6</td><td class="text-center"><img src="https://basket-12.wbbasket.ru/vol1875/part187570/187570711/images/big/1.webp" alt="Фото" style="width: 150;height: 100px;"></td><td class="articule">187570711</td><td>Пельменница металлическая для лепки пельменей и варенников</td><td>2023-11-04</td><td>2024-03-24</td><td class="paid">Не указана</td><td class="text-center"><a class="fa fa-floppy-o mr-auto button_paid_save" style="cursor: pointer;"></a><a class="bi bi-pencil-square mr-auto button_paid_edit" style="margin-left: 5px; cursor: pointer;"></a></td></tr>
-        <tr data-key="17858"><td class="text-center">7</td><td class="text-center"><img src="https://basket-12.wbbasket.ru/vol1690/part169002/169002992/images/big/1.webp" alt="Фото" style="width: 150;height: 100px;"></td><td class="articule">169002992</td><td>Пельменница форма</td><td>2023-07-13</td><td>2025-04-06</td><td class="paid">Не указана</td><td class="text-center"><a class="fa fa-floppy-o mr-auto button_paid_save" style="cursor: pointer;"></a><a class="bi bi-pencil-square mr-auto button_paid_edit" style="margin-left: 5px; cursor: pointer;"></a></td></tr>
-        <tr data-key="17856"><td class="text-center">8</td><td class="text-center"><img src="https://basket-16.wbbasket.ru/vol2412/part241208/241208047/images/big/1.webp" alt="Фото" style="width: 150;height: 100px;"></td><td class="articule">241208047</td><td>Толкушка для пюре металлическая</td><td>2024-06-28</td><td>2025-08-06</td><td class="paid">Не указана</td><td class="text-center"><a class="fa fa-floppy-o mr-auto button_paid_save" style="cursor: pointer;"></a><a class="bi bi-pencil-square mr-auto button_paid_edit" style="margin-left: 5px; cursor: pointer;"></a></td></tr>
-        <tr data-key="17857"><td class="text-center">9</td><td class="text-center"><img src="https://basket-24.wbbasket.ru/vol4151/part415116/415116466/images/big/1.webp" alt="Фото" style="width: 150;height: 100px;"></td><td class="articule">415116466</td><td>Толкушка для пюре металлическая</td><td>2025-05-13</td><td>2025-06-27</td><td class="paid">Не указана</td><td class="text-center"><a class="fa fa-floppy-o mr-auto button_paid_save" style="cursor: pointer;"></a><a class="bi bi-pencil-square mr-auto button_paid_edit" style="margin-left: 5px; cursor: pointer;"></a></td></tr>
-        </tbody></table>
-      <nav id="w1"></nav></div><!--    --></div>
-    <!-- /.container-fluid -->
-  </div>
+        <!-- Сообщение об ошибке -->
+        <div v-if="error" class="alert alert-danger">
+          {{ error }}
+        </div>
+
+        <!-- Таблица карточек -->
+        <div class="card" v-if="!loading && articles.length > 0">
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-striped table-bordered">
+                <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Фото</th>
+                  <th>Артикул</th>
+                  <th>Название</th>
+                  <th>Создан</th>
+                  <th>Обновлен</th>
+                  <th>Себестоимость</th>
+                  <th>Действие</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr v-for="(article, index) in articles" :key="article.articule">
+                  <td class="text-center">{{ (currentPage - 1) * pageSize + index + 1 }}</td>
+                  <td class="text-center">
+                    <img
+                        v-if="article.photo"
+                        :src="article.photo"
+                        alt="Фото"
+                        style="width: 80px; height: 80px; object-fit: contain;"
+                        @error="e => e.target.style.display = 'none'"
+                    >
+                    <span v-else class="text-muted">Нет фото</span>
+                  </td>
+                  <td>{{ article.articule }}</td>
+                  <td>{{ article.name || 'Нет названия' }}</td>
+                  <td>{{ formatDate(article.created) }}</td>
+                  <td>{{ formatDate(article.updated) }}</td>
+                  <td>
+                    <div v-if="article.editingCostPrice">
+                      <div class="input-group input-group-sm">
+                        <input
+                            type="text"
+                            v-model="article.tempCostPrice"
+                            class="form-control"
+                            @keyup.enter="saveCostPrice(article.articule)"
+                        >
+                        <div class="input-group-append">
+                          <button
+                              class="btn btn-success btn-sm"
+                              @click="saveCostPrice(article.articule)"
+                              title="Сохранить"
+                          >
+                            <i class="fas fa-check"></i>
+                          </button>
+                          <button
+                              class="btn btn-danger btn-sm"
+                              @click="cancelEditCostPrice(article.articule)"
+                              title="Отмена"
+                          >
+                            <i class="fas fa-times"></i>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    <div v-else>
+                      {{ formatPrice(article.cost_price) }}
+                      <button
+                          class="btn btn-link btn-sm"
+                          @click="startEditCostPrice(article.articule)"
+                          title="Редактировать"
+                      >
+                        <i class="fas fa-pencil-alt"></i>
+                      </button>
+                    </div>
+                  </td>
+                  <td class="text-center">
+                    <button
+                        class="btn btn-warning btn-sm"
+                        @click="startEditCostPrice(article.articule)"
+                        title="Редактировать себестоимость"
+                    >
+                      <i class="fas fa-edit"></i>
+                    </button>
+                  </td>
+                </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Пагинация -->
+            <nav v-if="totalPages > 1" class="mt-3">
+              <ul class="pagination justify-content-center">
+                <li class="page-item" :class="{ disabled: currentPage === 1 }">
+                  <a class="page-link" href="#" @click.prevent="goToPage(currentPage - 1)">
+                    &laquo;
+                  </a>
+                </li>
+
+                <li v-for="page in pagesArray" :key="page"
+                    class="page-item" :class="{ active: page === currentPage }">
+                  <a class="page-link" href="#" @click.prevent="goToPage(page)">
+                    {{ page }}
+                  </a>
+                </li>
+
+                <li class="page-item" :class="{ disabled: currentPage === totalPages }">
+                  <a class="page-link" href="#" @click.prevent="goToPage(currentPage + 1)">
+                    &raquo;
+                  </a>
+                </li>
+              </ul>
+
+              <div class="text-center mt-2 text-muted">
+                Показано {{ articles.length }} из {{ totalItems }} товаров
+              </div>
+            </nav>
+          </div>
+        </div>
+
+        <!-- Сообщение, если нет данных -->
+        <div v-if="!loading && articles.length === 0 && !error" class="alert alert-warning">
+          Нет данных. Нажмите "Обновить карточки" для загрузки товаров.
+        </div>
+
+        <!-- Индикатор загрузки -->
+        <div v-if="loading" class="text-center">
+          <div class="spinner-border text-primary" role="status">
+            <span class="sr-only">Загрузка...</span>
+          </div>
+          <p class="mt-2">Загрузка данных...</p>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
+.table-responsive {
+  overflow-x: auto;
+}
 
+.table img {
+  max-width: 80px;
+  max-height: 80px;
+  object-fit: contain;
+}
+
+.pagination {
+  margin-bottom: 0;
+}
+
+.page-item.active .page-link {
+  background-color: #007bff;
+  border-color: #007bff;
+}
+
+.page-link {
+  color: #007bff;
+}
+
+.page-link:hover {
+  color: #0056b3;
+}
+
+.input-group-append .btn {
+  margin-left: 2px;
+}
 </style>

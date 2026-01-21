@@ -42,26 +42,26 @@ func main() {
 	articleRepo := repository.NewWBArticleRepository(db)
 
 	// Инициализируем сервис
-	wbService := service.NewWBService(userRepo, statsGetRepo, statRepo, articlesGetRepo, articleRepo)
+	articlesService := service.NewWBService(userRepo, statsGetRepo, statRepo, articlesGetRepo, articleRepo)
 
 	// Определяем интервал
 	if interval == 0 {
-		interval = cfg.Worker.Interval
+		interval = cfg.Worker.ArticlesInterval // Добавьте это поле в конфиг
 	}
 
 	if runOnce {
 		// Запускаем один раз
-		fmt.Println("🚀 Запуск обработки отчетов...")
-		if err := wbService.ProcessPendingOrders(); err != nil {
+		fmt.Println("🚀 Запуск обработки карточек товаров...")
+		if err := articlesService.ProcessPendingArticles(); err != nil {
 			log.Printf("❌ Ошибка обработки: %v", err)
 			os.Exit(1)
 		}
-		fmt.Println("✅ Обработка завершена")
+		fmt.Println("✅ Обработка карточек завершена")
 		os.Exit(0)
 	}
 
 	// Запускаем как демон
-	fmt.Printf("🔄 Запуск воркера с интервалом %d секунд...\n", interval)
+	fmt.Printf("🔄 Запуск воркера карточек с интервалом %d секунд...\n", interval)
 
 	// Канал для сигналов завершения
 	sigChan := make(chan os.Signal, 1)
@@ -72,8 +72,8 @@ func main() {
 	defer ticker.Stop()
 
 	// Первый запуск сразу
-	fmt.Println("🎯 Первоначальная обработка...")
-	if err := wbService.ProcessPendingOrders(); err != nil {
+	fmt.Println("🎯 Первоначальная обработка карточек...")
+	if err := articlesService.ProcessPendingArticles(); err != nil {
 		log.Printf("⚠️ Ошибка при первоначальной обработке: %v", err)
 	}
 
@@ -81,9 +81,9 @@ func main() {
 	for {
 		select {
 		case <-ticker.C:
-			fmt.Printf("\n⏰ Запуск обработки в %s\n", time.Now().Format("2006-01-02 15:04:05"))
-			if err := wbService.ProcessPendingOrders(); err != nil {
-				log.Printf("⚠️ Ошибка обработки: %v", err)
+			fmt.Printf("\n⏰ Запуск обработки карточек в %s\n", time.Now().Format("2006-01-02 15:04:05"))
+			if err := articlesService.ProcessPendingArticles(); err != nil {
+				log.Printf("⚠️ Ошибка обработки карточек: %v", err)
 			}
 			fmt.Printf("💤 Следующий запуск через %d секунд...\n", interval)
 

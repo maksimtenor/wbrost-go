@@ -7,11 +7,20 @@ import (
 )
 
 type StatRepository struct {
-	db *PostgresDB
+	db       *PostgresDB
+	userRepo *UserRepository
 }
 
-func NewStatRepository(db *PostgresDB) *StatRepository {
-	return &StatRepository{db: db}
+type StatRepositoryInterface interface {
+	Create(stat *entity.Stat) error
+	GetStatDetails(userID int, dateFrom, dateTo string, page, pageSize int) ([]map[string]interface{}, error)
+	GetStatDetailsCount(userID int, dateFrom, dateTo string) (int, error)
+	GetStatSummary(userID int, dateFrom, dateTo string) (map[string]interface{}, error)
+	ExistsByHash(hash string) (bool, error)
+}
+
+func NewStatRepository(db *PostgresDB, userRepo *UserRepository) *StatRepository {
+	return &StatRepository{db: db, userRepo: userRepo}
 }
 
 // Create создает новую запись статистики в таблицу stat
@@ -103,33 +112,79 @@ func (r *StatRepository) Create(stat *entity.Stat) error {
 	return nil
 }
 
-// GetStatDetails получает детальную статистику по фильтрам
-func (r *StatRepository) GetStatDetails(userID int, dateFrom, dateTo string) ([]map[string]interface{}, error) {
+// GetStatDetails получает детальную статистику по фильтрам (с группировкой по nm_id)
+func (r *StatRepository) GetStatDetails(userID int, dateFrom, dateTo string, page, pageSize int) ([]map[string]interface{}, error) {
+	// Сначала получаем информацию о пользователе
+	user, err := r.userRepo.GetByID(userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user info: %w", err)
+	}
+	offset := (page - 1) * pageSize
 	query := `
         SELECT 
             COALESCE(s.nm_id, 0) as nm_id,
             COALESCE(s.subject_name, 'Нет названия') as name,
-            COALESCE(s.delivery_rub, 0) as delivery_rub,
-            COALESCE(s.deduction, 0) as deduction,
-            COALESCE(s.storage_fee, 0) as storage_fee,
-            COALESCE(s.additional_payment, 0) as additional_payment,
-            COALESCE(s.penalty, 0) as penalty,
-            COALESCE(s.rebill_logistic_cost, '0') as rebill_logistic_cost,
-            COALESCE(s.ppvz_for_pay, 0) as ppvz_for_pay,
-            COALESCE(s.quantity, 0) as sales,
-            COALESCE(s.return_amount, 0) as returns,
-            COALESCE(s.delivery_amount, 0) as delivery_amount
+            SUM(
+                CASE 
+                    WHEN s.ppvz_for_pay ~ '^[0-9]+\.?[0-9]*$' 
+                    THEN CAST(s.ppvz_for_pay AS NUMERIC) 
+                    ELSE 0 
+                END
+            ) as ppvz_for_pay,
+            SUM(COALESCE(s.delivery_rub, 0)) as delivery_rub,
+            SUM(COALESCE(s.deduction, 0)) as deduction,
+            SUM(COALESCE(s.storage_fee, 0)) as storage_fee,
+            SUM(COALESCE(s.additional_payment, 0)) as additional_payment,
+            SUM(COALESCE(s.penalty, 0)) as penalty,
+            SUM(
+                CASE 
+                    WHEN s.rebill_logistic_cost ~ '^[0-9]+\.?[0-9]*$' 
+                    THEN CAST(s.rebill_logistic_cost AS NUMERIC)
+                    ELSE 0 
+                END
+            ) as rebill_logistic_cost,
+            SUM(
+                CASE 
+                    WHEN s.supplier_oper_name IN (1, 7) -- Продажа или Коррекция продаж
+                    THEN 1 
+                    ELSE 0 
+                END
+            ) as count_sales,
+            SUM(
+                CASE 
+                    WHEN s.supplier_oper_name = 2 -- Возврат
+                    THEN 1 
+                    ELSE 0 
+                END
+            ) as count_refund,
+            SUM(
+                CASE 
+                    WHEN s.supplier_oper_name IN (1, 7) -- Продажа или Коррекция продаж
+                    THEN COALESCE(s.quantity, 0)
+                    ELSE 0 
+                END
+            ) as sales,
+            SUM(
+                CASE 
+                    WHEN s.supplier_oper_name = 2 -- Возврат
+                    THEN COALESCE(s.return_amount, 0)
+                    ELSE 0 
+                END
+            ) as returns
         FROM stat s
         WHERE s.user_id = $1
             AND s.sale_dt BETWEEN $2 AND $3
             AND s.nm_id IS NOT NULL
             AND s.nm_id != 0
-        ORDER BY s.nm_id
+        GROUP BY s.nm_id, s.subject_name
+        ORDER BY ppvz_for_pay DESC
+        LIMIT $4 OFFSET $5
     `
 
-	// Если нужно включить все записи (включая nm_id = 0), уберите последнее условие
+	// Добавляем время для правильного диапазона дат
+	dateToWithTime := dateTo + " 23:59:59"
 
-	rows, err := r.db.Query(query, userID, dateFrom, dateTo)
+	rows, err := r.db.Query(query, userID, dateFrom, dateToWithTime, pageSize, offset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query stat details: %w", err)
 	}
@@ -140,36 +195,46 @@ func (r *StatRepository) GetStatDetails(userID int, dateFrom, dateTo string) ([]
 	for rows.Next() {
 		var nmID int64
 		var name string
-		var deliveryRub, deduction, storageFee, additionalPayment, penalty, ppvzForPay float64
-		var rebillLogisticCost string
-		var sales, returns, deliveryAmount int
+		var ppvzForPay, deliveryRub, deduction, storageFee, additionalPayment, penalty, rebillLogisticCost float64
+		var countSales, countRefund, sales, returns int
 
 		err := rows.Scan(
 			&nmID,
 			&name,
+			&ppvzForPay,
 			&deliveryRub,
 			&deduction,
 			&storageFee,
 			&additionalPayment,
 			&penalty,
 			&rebillLogisticCost,
-			&ppvzForPay,
+			&countSales,
+			&countRefund,
 			&sales,
 			&returns,
-			&deliveryAmount,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan stat detail: %w", err)
 		}
 
 		// Расчет дополнительных полей
-		var deliveryPerUnit float64
-		if sales > 0 {
-			deliveryPerUnit = deliveryRub / float64(sales)
+		deliveryPerUnit := 0.0
+		if sales+returns > 0 {
+			deliveryPerUnit = deliveryRub / float64(sales+returns)
+		}
+		costPriceTotal := 0.0
+
+		// ВАШ ОРИГИНАЛЬНЫЙ РАСЧЕТ
+		rebillLogisticCostInt := rebillLogisticCost
+		netProfitBeforeTax := deliveryRub + penalty + deduction + storageFee + additionalPayment + rebillLogisticCostInt + float64(costPriceTotal)
+		taxesAmount := 0.0
+
+		// Учитываем налог пользователя (если он задан)
+		if user.Taxes > 0 {
+			taxesAmount = (ppvzForPay - netProfitBeforeTax) * (float64(user.Taxes) / 100)
 		}
 
-		var netProfit float64
-		netProfit = ppvzForPay - deliveryRub - deduction - storageFee - additionalPayment - penalty
+		netProfit := (ppvzForPay - netProfitBeforeTax) - taxesAmount
 
 		item := map[string]interface{}{
 			"nm_id":                nmID,
@@ -183,11 +248,12 @@ func (r *StatRepository) GetStatDetails(userID int, dateFrom, dateTo string) ([]
 			"penalty":              penalty,
 			"rebill_logistic_cost": rebillLogisticCost,
 			"ppvz_for_pay":         ppvzForPay,
+			"count_sales":          countSales,
+			"count_refund":         countRefund,
 			"sales":                sales,
 			"returns":              returns,
-			"delivery_amount":      deliveryAmount,
-			"cost_price":           0, // Здесь можно добавить расчет себестоимости если есть данные
 			"net_profit":           netProfit,
+			"taxesAmount":          taxesAmount,
 		}
 
 		results = append(results, item)
@@ -196,40 +262,86 @@ func (r *StatRepository) GetStatDetails(userID int, dateFrom, dateTo string) ([]
 	return results, nil
 }
 
-// GetStatSummary получает итоговые суммы
+// GetStatDetailsCount получает общее количество записей для пагинации
+func (r *StatRepository) GetStatDetailsCount(userID int, dateFrom, dateTo string) (int, error) {
+	query := `
+        SELECT COUNT(DISTINCT s.nm_id)
+        FROM stat s
+        WHERE s.user_id = $1
+            AND s.sale_dt BETWEEN $2 AND $3
+            AND s.nm_id IS NOT NULL
+            AND s.nm_id != 0
+    `
+
+	dateToWithTime := dateTo + " 23:59:59"
+
+	var count int
+	err := r.db.QueryRow(query, userID, dateFrom, dateToWithTime).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get stat details count: %w", err)
+	}
+
+	return count, nil
+}
+
+// GetStatSummary получает итоговые суммы (уже агрегированные)
 func (r *StatRepository) GetStatSummary(userID int, dateFrom, dateTo string) (map[string]interface{}, error) {
 	query := `
         SELECT 
-            COALESCE(SUM(delivery_rub), 0) as total_delivery,
-            COALESCE(SUM(deduction), 0) as total_deduction,
-            COALESCE(SUM(storage_fee), 0) as total_storage,
-            COALESCE(SUM(additional_payment), 0) as total_additional,
-            COALESCE(SUM(penalty), 0) as total_penalty,
-            COALESCE(SUM(ppvz_for_pay), 0) as total_revenue,
-            COALESCE(SUM(quantity), 0) as total_sales,
-            COALESCE(SUM(return_amount), 0) as total_returns,
-            COUNT(DISTINCT nm_id) as unique_products
-        FROM stat
-        WHERE user_id = $1
-            AND sale_dt BETWEEN $2 AND $3
-            AND nm_id IS NOT NULL
-            AND nm_id != 0
+            SUM(
+                CASE 
+                    WHEN s.ppvz_for_pay ~ '^[0-9]+\.?[0-9]*$' 
+                    THEN CAST(s.ppvz_for_pay AS NUMERIC) 
+                    ELSE 0 
+                END
+            ) as total_ppvz_for_pay,
+            SUM(COALESCE(s.delivery_rub, 0)) as total_delivery_rub,
+            SUM(COALESCE(s.deduction, 0)) as total_deduction,
+            SUM(COALESCE(s.storage_fee, 0)) as total_storage_fee,
+            SUM(COALESCE(s.additional_payment, 0)) as total_additional_payment,
+            SUM(COALESCE(s.penalty, 0)) as total_penalty,
+            SUM(
+                CASE 
+                    WHEN s.supplier_oper_name = 1 
+                    THEN 1 
+                    ELSE 0 
+                END
+            ) as total_count_sales,
+            SUM(
+                CASE 
+                    WHEN s.supplier_oper_name = 2 
+                    THEN 1 
+                    ELSE 0 
+                END
+            ) as total_count_refund,
+            SUM(COALESCE(s.quantity, 0)) as total_quantity,
+            SUM(COALESCE(s.return_amount, 0)) as total_return_amount,
+            COUNT(DISTINCT s.nm_id) as unique_products
+        FROM stat s
+        WHERE s.user_id = $1
+            AND s.sale_dt BETWEEN $2 AND $3
+            AND s.nm_id IS NOT NULL
+            AND s.nm_id != 0
     `
 
-	row := r.db.QueryRow(query, userID, dateFrom, dateTo)
+	dateToWithTime := dateTo + " 23:59:59"
 
-	var totalDelivery, totalDeduction, totalStorage, totalAdditional, totalPenalty, totalRevenue float64
-	var totalSales, totalReturns, uniqueProducts int
+	row := r.db.QueryRow(query, userID, dateFrom, dateToWithTime)
+
+	var totalPpvzForPay, totalDeliveryRub, totalDeduction, totalStorageFee, totalAdditionalPayment, totalPenalty sql.NullFloat64
+	var totalCountSales, totalCountRefund, totalQuantity, totalReturnAmount, uniqueProducts sql.NullInt64
 
 	err := row.Scan(
-		&totalDelivery,
+		&totalPpvzForPay,
+		&totalDeliveryRub,
 		&totalDeduction,
-		&totalStorage,
-		&totalAdditional,
+		&totalStorageFee,
+		&totalAdditionalPayment,
 		&totalPenalty,
-		&totalRevenue,
-		&totalSales,
-		&totalReturns,
+		&totalCountSales,
+		&totalCountRefund,
+		&totalQuantity,
+		&totalReturnAmount,
 		&uniqueProducts,
 	)
 
@@ -237,22 +349,41 @@ func (r *StatRepository) GetStatSummary(userID int, dateFrom, dateTo string) (ma
 		return nil, fmt.Errorf("failed to get stat summary: %w", err)
 	}
 
-	totalNetProfit := totalRevenue - totalDelivery - totalDeduction - totalStorage - totalAdditional - totalPenalty
+	totalNetProfit := getFloatValue(totalPpvzForPay) - getFloatValue(totalDeliveryRub) -
+		getFloatValue(totalDeduction) - getFloatValue(totalStorageFee) -
+		getFloatValue(totalAdditionalPayment) - getFloatValue(totalPenalty)
 
 	summary := map[string]interface{}{
-		"total_delivery_rub":       totalDelivery,
-		"total_deduction":          totalDeduction,
-		"total_storage_fee":        totalStorage,
-		"total_additional_payment": totalAdditional,
-		"total_penalty":            totalPenalty,
-		"total_ppvz_for_pay":       totalRevenue,
-		"total_sales":              totalSales,
-		"total_returns":            totalReturns,
-		"unique_products":          uniqueProducts,
+		"total_ppvz_for_pay":       getFloatValue(totalPpvzForPay),
+		"total_delivery_rub":       getFloatValue(totalDeliveryRub),
+		"total_deduction":          getFloatValue(totalDeduction),
+		"total_storage_fee":        getFloatValue(totalStorageFee),
+		"total_additional_payment": getFloatValue(totalAdditionalPayment),
+		"total_penalty":            getFloatValue(totalPenalty),
+		"total_count_sales":        getIntValue(totalCountSales),
+		"total_count_refund":       getIntValue(totalCountRefund),
+		"total_quantity":           getIntValue(totalQuantity),
+		"total_return_amount":      getIntValue(totalReturnAmount),
+		"unique_products":          getIntValue(uniqueProducts),
 		"total_net_profit":         totalNetProfit,
 	}
 
 	return summary, nil
+}
+
+// Вспомогательные функции
+func getFloatValue(nf sql.NullFloat64) float64 {
+	if nf.Valid {
+		return nf.Float64
+	}
+	return 0.0
+}
+
+func getIntValue(ni sql.NullInt64) int64 {
+	if ni.Valid {
+		return ni.Int64
+	}
+	return 0
 }
 
 // Helper функция для генерации URL фото

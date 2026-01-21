@@ -4,7 +4,9 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 	"wbrost-go/internal/entity"
@@ -14,17 +16,120 @@ import (
 )
 
 type WBStatsHandler struct {
-	userRepo  *repository.UserRepository
-	statsRepo *repository.WBStatsGetRepository
-	jwtSecret []byte
+	userRepo    *repository.UserRepository
+	wbStatsRepo *repository.WBStatsGetRepository
+	statRepo    *repository.StatRepository
+	jwtSecret   []byte
 }
 
-func NewWBStatsHandler(userRepo *repository.UserRepository, statsRepo *repository.WBStatsGetRepository, jwtSecret string) *WBStatsHandler {
+func NewWBStatsHandler(
+	userRepo *repository.UserRepository,
+	wbStatsRepo *repository.WBStatsGetRepository,
+	statRepo *repository.StatRepository,
+	jwtSecret string) *WBStatsHandler {
 	return &WBStatsHandler{
-		userRepo:  userRepo,
-		statsRepo: statsRepo,
-		jwtSecret: []byte(jwtSecret),
+		userRepo:    userRepo,
+		wbStatsRepo: wbStatsRepo,
+		statRepo:    statRepo,
+		jwtSecret:   []byte(jwtSecret),
 	}
+}
+
+// GetStatDetail - GET /api/stat/details | Получение детальной статистики
+func (h *WBStatsHandler) GetStatDetail(w http.ResponseWriter, r *http.Request) {
+	// Получить пользователя по токену
+	user, err := h.getUserFromRequest(r)
+	if err != nil {
+		respondWithJSON(w, http.StatusUnauthorized, entity.ErrorResponse{Error: "Unauthorized"})
+		return
+	}
+
+	// Получить параметры дат из запроса(query params)
+	dateFrom := r.URL.Query().Get("dateFrom")
+	dateTo := r.URL.Query().Get("dateTo")
+	pageStr := r.URL.Query().Get("page")
+	pageSizeStr := r.URL.Query().Get("pageSize")
+
+	//Валидация дат(если не указаны, можно использовать значения по умолчанию или вернуть ошибку)
+	if dateFrom == "" || dateTo == "" {
+		respondWithJSON(w, http.StatusBadRequest, entity.ErrorResponse{
+			Error: "Parameters dateFrom and dateTo are required",
+		})
+		return
+	}
+
+	// Проверяем формат дат (опционально)
+	if _, err := time.Parse("2006-01-02", dateFrom); err != nil {
+		respondWithJSON(w, http.StatusBadRequest, entity.ErrorResponse{
+			Error: "Invalid dateFrom format, expected YYYY-MM-DD",
+		})
+		return
+	}
+
+	if _, err := time.Parse("2006-01-02", dateTo); err != nil {
+		respondWithJSON(w, http.StatusBadRequest, entity.ErrorResponse{
+			Error: "Invalid dateTo format, expected YYYY-MM-DD",
+		})
+		return
+	}
+
+	// Параметры пагинации
+	page := 1
+	if pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
+	}
+
+	pageSize := 20 // По умолчанию
+	if pageSizeStr != "" {
+		if ps, err := strconv.Atoi(pageSizeStr); err == nil && ps > 0 && ps <= 100 {
+			pageSize = ps
+		}
+	}
+
+	// Получить детальные данные статистики
+	statDetails, err := h.statRepo.GetStatDetails(user.ID, dateFrom, dateTo, page, pageSize)
+	if err != nil {
+		respondWithJSON(w, http.StatusInternalServerError, entity.ErrorResponse{
+			Error: "Failed to get stat details: " + err.Error(),
+		})
+		return
+	}
+
+	// Получить общее количество записей для пагинации
+	totalCount, err := h.statRepo.GetStatDetailsCount(user.ID, dateFrom, dateTo)
+	if err != nil {
+		respondWithJSON(w, http.StatusInternalServerError, entity.ErrorResponse{
+			Error: "Failed to get total count: " + err.Error(),
+		})
+		return
+	}
+
+	// Получить итоговые суммы
+	summaryStatDetails, err := h.statRepo.GetStatSummary(user.ID, dateFrom, dateTo)
+	if err != nil {
+		respondWithJSON(w, http.StatusInternalServerError, entity.ErrorResponse{
+			Error: "Failed to get stat summary: " + err.Error(),
+		})
+		return
+	}
+
+	// Формируем ответ
+	response := map[string]interface{}{
+		"data":    statDetails,
+		"summary": summaryStatDetails,
+		"taxes":   user.Taxes,
+		"pagination": map[string]interface{}{
+			"current_page": page,
+			"page_size":    pageSize,
+			"total_items":  totalCount,
+			"total_pages":  int(math.Ceil(float64(totalCount) / float64(pageSize))),
+		},
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }
 
 // GetWBReports - GET /api/wb/stats | Получение списка репортов(заказов отчетов из бд)
@@ -37,7 +142,7 @@ func (h *WBStatsHandler) GetWBReports(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Получить отчеты для этого пользователя
-	reports, err := h.statsRepo.GetByUserID(user.ID)
+	reports, err := h.wbStatsRepo.GetByUserID(user.ID)
 	if err != nil {
 		respondWithJSON(w, http.StatusInternalServerError, entity.ErrorResponse{Error: "Failed to get reports"})
 		return
@@ -95,7 +200,7 @@ func (h *WBStatsHandler) CreateWBReport(w http.ResponseWriter, r *http.Request) 
 		DateTo:   req.DateTo,
 	}
 
-	if err := h.statsRepo.Create(stats); err != nil {
+	if err := h.wbStatsRepo.Create(stats); err != nil {
 		respondWithJSON(w, http.StatusInternalServerError, entity.ErrorResponse{Error: "Failed to create report: " + err.Error()})
 		return
 	}
@@ -119,7 +224,7 @@ func (h *WBStatsHandler) fetchWBDataAsync(reportID int, user *repository.User, d
 	time.Sleep(2 * time.Second) // Имитировать вызов API
 
 	// Обновление статуса на "успех"
-	h.statsRepo.UpdateStatus(reportID, 1, "")
+	h.wbStatsRepo.UpdateStatus(reportID, 1, "")
 
 	fmt.Printf("Report %d processed successfully for user %d\n", reportID, user.ID)
 }
