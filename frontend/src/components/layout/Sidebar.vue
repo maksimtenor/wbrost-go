@@ -184,19 +184,22 @@ export default {
 
     userTypeAccount() {
       if (!this.user) return 'гость'
-      if (this.user.admin === 1) {
-        return 'админ'
-      } else if (this.user.id === 2) {
-        return 'владелец'
-      }
 
+      if (this.user.admin === 2) {
+        return 'владелец'
+      } else if (this.user.admin === 1) {
+        return 'админ'
+      }
       return 'пользователь'
     },
 
     userTypeClass() {
       if (!this.user) return 'account-type-guest'
-      if (this.user.admin === 1) return 'account-type-admin'
-      if (this.user.id === 2) return 'account-type-owner'
+      if (this.user.admin === 2) {
+        return 'account-type-owner'
+      } else if (this.user.admin === 1) {
+        return 'account-type-admin'
+      }
       return 'account-type-user'
     }
   },
