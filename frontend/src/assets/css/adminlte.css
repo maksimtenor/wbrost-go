@@ -2854,11 +2854,11 @@ fieldset:disabled a.btn {
     box-shadow: none;
 }
 
-.btn-success:hover {
-    color: #fff;
-    background-color: #218838;
-    border-color: #1e7e34;
-}
+/*.btn-success:hover {*/
+/*    color: #fff;*/
+/*    background-color: #218838;*/
+/*    border-color: #1e7e34;*/
+/*}*/
 
 .btn-success:focus, .btn-success.focus {
     color: #fff;
@@ -11173,6 +11173,9 @@ body,
 
 .wrapper .content-wrapper {
     min-height: calc(100vh - calc(3.5rem + 1px) - calc(3.5rem + 1px));
+}
+#app>.wrapper .content-wrapper {
+    min-height: 100vh;
 }
 
 .layout-boxed .wrapper {

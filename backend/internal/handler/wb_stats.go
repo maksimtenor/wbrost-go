@@ -229,6 +229,71 @@ func (h *WBStatsHandler) fetchWBDataAsync(reportID int, user *repository.User, d
 	fmt.Printf("Report %d processed successfully for user %d\n", reportID, user.ID)
 }
 
+// GetDashboardStats - GET /api/dashboard/stats | Получение статистики для дашборда
+func (h *WBStatsHandler) GetDashboardStats(w http.ResponseWriter, r *http.Request) {
+	// Получить пользователя по токену
+	user, err := h.getUserFromRequest(r)
+	if err != nil {
+		respondWithJSON(w, http.StatusUnauthorized, entity.ErrorResponse{Error: "Unauthorized"})
+		return
+	}
+
+	// Получить параметры дат (по умолчанию - текущий месяц)
+	now := time.Now()
+	firstDay := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+	lastDay := firstDay.AddDate(0, 1, -1)
+
+	dateFrom := r.URL.Query().Get("dateFrom")
+	dateTo := r.URL.Query().Get("dateTo")
+
+	if dateFrom == "" {
+		dateFrom = firstDay.Format("2006-01-02")
+	}
+	if dateTo == "" {
+		dateTo = lastDay.Format("2006-01-02")
+	}
+
+	// Получить статистику для дашборда
+	stats, err := h.statRepo.GetDashboardStats(user.ID, dateFrom, dateTo)
+	if err != nil {
+		respondWithJSON(w, http.StatusInternalServerError, entity.ErrorResponse{
+			Error: "Failed to get dashboard stats: " + err.Error(),
+		})
+		return
+	}
+
+	// Получить данные для графиков
+	chartData, err := h.statRepo.GetChartData(user.ID, dateFrom, dateTo)
+	if err != nil {
+		respondWithJSON(w, http.StatusInternalServerError, entity.ErrorResponse{
+			Error: "Failed to get chart data: " + err.Error(),
+		})
+		return
+	}
+
+	// Получить данные по месяцам
+	monthlyRevenue, err := h.statRepo.GetMonthlyRevenue(user.ID)
+	if err != nil {
+		respondWithJSON(w, http.StatusInternalServerError, entity.ErrorResponse{
+			Error: "Failed to get monthly revenue: " + err.Error(),
+		})
+		return
+	}
+
+	// Формируем ответ
+	response := map[string]interface{}{
+		"stats":           stats,
+		"charts":          chartData,
+		"monthly_revenue": monthlyRevenue, // Добавляем новые данные
+		"period": map[string]string{
+			"dateFrom": dateFrom,
+			"dateTo":   dateTo,
+		},
+	}
+
+	respondWithJSON(w, http.StatusOK, response)
+}
+
 // Вспомогательная функция для получения пользователя из JWT-токена.
 func (h *WBStatsHandler) getUserFromRequest(r *http.Request) (*repository.User, error) {
 	authHeader := r.Header.Get("Authorization")

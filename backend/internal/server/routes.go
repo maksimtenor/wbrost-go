@@ -72,6 +72,15 @@ func SetupRoutes(
 		}
 	})
 
+	mux.HandleFunc("/api/dashboard/stats", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			wbStatsHandler.GetDashboardStats(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
 	// Apply CORS middleware
 	handler := middleware.CORS(mux)
 
