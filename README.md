@@ -41,6 +41,8 @@ SERVER_PORT=:8080
    go mod tidy (устанавливает зависимости)
    go run migrate.go (выполнит миграции в базу данных)
    go run cmd/api/main.go (запуск сервера)
+   go run ./cmd/worker/main.go -once (временная команда для подтягивания статистики от ВБ)
+   go run ./cmd/articles_worker/main.go -once (временая команда для подтягивания артикулов/карточек из ВБ)
 ```
 
 ### Git - ведение версионности Semantic Versioning (SemVer)
