@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"time"
+	"wbrost-go/internal/entity"
 )
 
 // User - модель для работы с таблицей users
@@ -34,6 +35,60 @@ type UserRepository struct {
 
 func NewUserRepository(db *PostgresDB) *UserRepository {
 	return &UserRepository{db: db}
+}
+func (r *UserRepository) GetCountAllUsers() (int, error) {
+	var count int
+	err := r.db.QueryRow(
+		"SELECT COUNT(*) FROM users",
+	).Scan(&count)
+
+	return count, err
+}
+func (r *UserRepository) GetAll(page, pageSize int) ([]entity.User, error) {
+	offset := (page - 1) * pageSize
+	query := `SELECT 
+        id_user, taxes, username, password, email, admin, block, pro, 
+        name, phone, wb_key, ozon_key, u2782212_wbrosus, ozon_status,
+        created_at, updated_at, del, last_login
+        FROM users
+ORDER BY created_at DESC
+LIMIT $1 OFFSET $2`
+
+	rows, err := r.db.Query(query, pageSize, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var users []entity.User
+	for rows.Next() {
+		var a entity.User
+		err := rows.Scan(
+			&a.ID,
+			&a.Taxes,
+			&a.Username,
+			&a.Password,
+			&a.Email,
+			&a.Admin,
+			&a.Block,
+			&a.Pro,
+			&a.Name,
+			&a.Phone,
+			&a.WbKey,
+			&a.OzonKey,
+			&a.U2782212Wbrosus,
+			&a.OzonStatus,
+			&a.CreatedAt,
+			&a.UpdatedAt,
+			&a.Del,
+			&a.LastLogin,
+		)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, a)
+	}
+
+	return users, nil
 }
 
 func (r *UserRepository) GetByUsername(username string) (*User, error) {

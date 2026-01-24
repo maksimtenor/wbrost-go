@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 	"wbrost-go/internal/entity"
@@ -28,6 +29,104 @@ func NewAuthHandler(authService *service.AuthService, userRepo *repository.UserR
 		userRepo:    userRepo,
 		jwtSecret:   []byte(jwtSecret),
 	}
+}
+
+func (h *AuthHandler) GetUsersList(w http.ResponseWriter, r *http.Request) {
+	// Получить пользователя по токену
+	userCheck, err := h.getUserFromRequest(r)
+	if err != nil {
+		respondWithJSON(w, http.StatusUnauthorized, entity.ErrorResponse{Error: "Unauthorized"})
+		return
+	}
+	if userCheck.Admin < 1 {
+		respondWithJSON(w, http.StatusForbidden, entity.ErrorResponse{Error: "Вам сюда нельзя!"})
+		return
+	}
+	// Параметры запроса
+	pageStr := r.URL.Query().Get("page")
+	pageSizeStr := r.URL.Query().Get("pageSize")
+
+	page := 1
+	if pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
+	}
+
+	pageSize := 10 // По умолчанию
+	if pageSizeStr != "" {
+		if ps, err := strconv.Atoi(pageSizeStr); err == nil && ps > 0 && ps <= 100 {
+			pageSize = ps
+		}
+	}
+
+	var users []entity.User
+	var totalCount int
+
+	// Получение всех пользователей с пагинацией
+	users, err = h.userRepo.GetAll(page, pageSize)
+	if err != nil {
+		respondWithJSON(w, http.StatusInternalServerError, entity.ErrorResponse{
+			Error: "Failed to get articles: " + err.Error(),
+		})
+		return
+	}
+
+	// Получить общее количество
+	totalCount, err = h.userRepo.GetCountAllUsers()
+	if err != nil {
+		respondWithJSON(w, http.StatusInternalServerError, entity.ErrorResponse{
+			Error: "Failed to get total count: " + err.Error(),
+		})
+		return
+	}
+
+	// Форматировать ответ
+	response := make([]map[string]interface{}, len(users))
+	for i, user := range users {
+
+		// Форматирование дат
+		createdDate := user.CreatedAt.Format("2006-01-02")
+		updatedDate := user.UpdatedAt.Format("2006-01-02")
+		// Извлекаем значения из NullString
+		phone := ""
+		if user.Phone.Valid {
+			phone = user.Phone.String
+		}
+
+		response[i] = map[string]interface{}{
+			"id":          user.ID,
+			"taxes":       user.Taxes,
+			"username":    user.Username,
+			"password":    user.Password,
+			"email":       user.Email,
+			"admin":       user.Admin,
+			"block":       user.Block,
+			"pro":         user.Pro,
+			"name":        user.Name,
+			"phone":       phone,
+			"wb_key":      user.WbKey,
+			"ozon_key":    user.OzonKey,
+			"ozon_status": user.OzonStatus,
+			"created_at":  createdDate,
+			"updated_at":  updatedDate,
+			"del":         user.Del,
+			"last_login":  user.LastLogin,
+		}
+	}
+
+	// Полный ответ с пагинацией
+	fullResponse := map[string]interface{}{
+		"data": response,
+		"pagination": map[string]interface{}{
+			"current_page": page,
+			"page_size":    pageSize,
+			"total_items":  totalCount,
+			"total_pages":  (totalCount + pageSize - 1) / pageSize,
+		},
+	}
+
+	respondWithJSON(w, http.StatusOK, fullResponse)
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
@@ -144,7 +243,7 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 		Username:     req.Username,
 		Email:        req.Email,
 		PasswordHash: string(hashedPassword),
-		Pro:          1,
+		Pro:          0, // По умолчанию не активирован Pro
 		Admin:        0, // По умолчанию не админ
 	})
 

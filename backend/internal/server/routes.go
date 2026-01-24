@@ -81,6 +81,15 @@ func SetupRoutes(
 		}
 	})
 
+	mux.HandleFunc("/api/site/users", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			authHandler.GetUsersList(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
 	// Apply CORS middleware
 	handler := middleware.CORS(mux)
 

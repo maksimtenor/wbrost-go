@@ -3,6 +3,7 @@ package service
 import (
 	"database/sql"
 	"time"
+	"wbrost-go/internal/entity"
 	"wbrost-go/internal/repository"
 )
 
@@ -25,6 +26,10 @@ func NewAuthService(userRepo *repository.UserRepository) *AuthService {
 
 func (s *AuthService) GetUserByUsername(username string) (*repository.User, error) {
 	return s.userRepo.GetByUsername(username)
+}
+
+func (s *AuthService) GetAllUsers(page, pageSize int) ([]entity.User, error) {
+	return s.userRepo.GetAll(page, pageSize)
 }
 
 func (s *AuthService) CreateUser(dto CreateUserDTO) (*repository.User, error) {

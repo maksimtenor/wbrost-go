@@ -40,6 +40,7 @@ const pagesArray = computed(() => {
   return pages
 })
 
+// Загрузка статистики
 const fetchStatDetails = async () => {
   if (!localStorage.getItem('token')) {
     router.push('/login')

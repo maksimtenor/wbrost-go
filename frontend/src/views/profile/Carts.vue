@@ -49,10 +49,19 @@ const fetchProducts = async () => {
     error.value = ''
 
     const token = localStorage.getItem('token')
-    const response = await fetch('http://localhost:8080/api/articles', {
+    if (!token) {
+      error.value = 'Необходима авторизация'
+      return
+    }
+
+    const response = await fetch('/api/articles', {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
+      },
+      params: {
+        page: currentPage.value,
+        pageSize: pageSize.value
       }
     })
 
@@ -65,9 +74,9 @@ const fetchProducts = async () => {
 
     // Пагинация (замените на реальные данные с сервера)
     if (data.pagination) {
-      currentPage.value = data.pagination.current_page || 1
-      totalItems.value = data.pagination.total_items || products.value.length
-      totalPages.value = data.pagination.total_pages || 1
+      currentPage.value = data.pagination.current_page
+      totalItems.value = data.pagination.total_items
+      totalPages.value = data.pagination.total_pages
     } else {
       totalItems.value = products.value.length
       totalPages.value = Math.ceil(products.value.length / pageSize.value)
@@ -201,7 +210,7 @@ const cancelEditCostPrice = (articule) => {
 const goToPage = (page) => {
   if (page < 1 || page > totalPages.value) return
   currentPage.value = page
-  filterProducts()
+  fetchProducts()
 }
 
 // Фильтрация и пагинация

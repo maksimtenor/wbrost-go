@@ -5,13 +5,17 @@ import Home from '@/views/site/Home.vue'
 import Login from '@/views/site/Login.vue'
 import Signup from '@/views/site/Signup.vue'
 import Info from '@/views/site/Info.vue'
+import Users from '@/views/site/Users.vue'
 import Donation from '@/views/site/Donation.vue'
-import Profile from '@/views/profile/Index.vue'
+
+import Profile from '@/views/profile/Main.vue'
 import ApiKeys from '@/views/profile/ApiKeys.vue'
 import Carts from '@/views/profile/Carts.vue'
-import User from '@/views/user/Index.vue'
+
 import GetReports from '@/views/stat/GetReports.vue'
 import StatDetail from '@/views/stat/StatDetail.vue'
+
+import AccessDenied from '@/views/errors/access-denied.vue'
 
 const routes = [
     {
@@ -19,6 +23,12 @@ const routes = [
         name: 'Home',
         component: Home,
         meta: { requiresAuth: true }
+    },
+    {
+        path: '/access-denied',
+        name: 'access-denied',
+        component: AccessDenied,
+        meta: { title: 'Доступ запрещен' }
     },
     {
         path: '/login',
@@ -63,9 +73,9 @@ const routes = [
         meta: { guestOnly: true }
     },
     {
-        path: '/user',
-        name: 'User',
-        component: User,
+        path: '/users',
+        name: 'Users',
+        component: Users,
         meta: { guestOnly: true }
     },
     {

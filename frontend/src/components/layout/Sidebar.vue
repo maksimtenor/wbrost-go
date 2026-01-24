@@ -80,7 +80,13 @@
                 <p>Товары</p>
               </router-link>
             </li>
-
+            <!-- Пользователи -->
+            <li class="nav-item" v-if="user.admin">
+              <router-link to="/users" class="nav-link">
+                <i class="nav-icon fas fa-atom"></i>
+                <p>Пользователи</p>
+              </router-link>
+            </li>
             <!-- Профиль -->
             <li class="nav-item has-treeview" :class="{ 'menu-open': activeMenu === 'profile' }">
               <a href="#" class="nav-link" @click.prevent="toggleMenu('profile')">
