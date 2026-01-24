@@ -1,0 +1,98 @@
+# docker-compose.yml
+services:
+  # База данных
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123123123
+      POSTGRES_DB: wbrost_go
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s  # добавьте эту строку
+
+  # Go бэкенд
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+    ports:
+      - "8081:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy  # Ждем пока БД не станет здоровой
+    environment:
+      SERVER_PORT: "8080"
+    env_file:
+      - .env  # ЗАГРУЖАЕМ ПЕРЕМЕННЫЕ ИЗ .env ФАЙЛА
+    command: sh -c "sleep 10 && ./migrate && ./main"  # ДОБАВЛЕНО: сначала миграции, потом сервер
+    # volumes:  # УБРАЛ - не нужно для Dockerfile выше
+    #   - ./backend:/app/backend
+
+  # Vue.js фронтенд (для разработки)
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend/Dockerfile
+    ports:
+      - "3001:3000" # наружу 3001, внутри 3000
+    depends_on:
+      - backend
+    env_file:
+      - .env  # ЗАГРУЖАЕМ ТОТ ЖЕ .env ФАЙЛ
+    volumes:
+      - ./frontend:/app  # ДОБАВЬ ЭТО для hot reload
+      - ./.env:/app/.env.production  # МОНТИРУЕМ КОРНЕВОЙ .env
+      - /app/node_modules
+    command: >
+      sh -c "
+        # Копируем VITE_ переменные из корневого .env в .env.local
+        grep '^VITE_' /app/.env.production > /app/.env.local || true
+        npm run dev -- --host 0.0.0.0
+      "
+  # Воркер статистики
+  wb-stats-worker:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: 123123123
+      DB_NAME: wbrost_go
+      JWT_SECRET: "your-secret-key"
+      WORKER_INTERVAL: "60"
+    command: ./worker  # Запускаем воркер вместо основного приложения
+    restart: unless-stopped
+
+  # Воркер карточек товаров
+  wb-articles-worker:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: 123123123
+      DB_NAME: wbrost_go
+      JWT_SECRET: "your-secret-key"
+      WORKER_ARTICLES_INTERVAL: "3600"
+    command: ./articles_worker
+    restart: unless-stopped
+volumes:
+  postgres_data:

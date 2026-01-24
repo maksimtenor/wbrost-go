@@ -2,6 +2,7 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import Sidebar from "../../components/layout/Sidebar.vue";
 import Navbar from "../../components/layout/Navbar.vue";
+import apiClient from '@/api/client'
 
 // Данные формы
 const formData = ref({
@@ -91,22 +92,13 @@ const loadReports = async (silent = false) => {
       throw new Error('Требуется авторизация');
     }
 
-    const response = await fetch('http://localhost:8080/api/wb/stats', {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
+    const response = await apiClient.get('/wb/stats');
 
     if (response.status === 401) {
       throw new Error('Требуется авторизация');
     }
 
-    if (!response.ok) {
-      throw new Error(`Ошибка сервера: ${response.status}`);
-    }
-
-    const data = await response.json();
+    const data = response.data;
 
     // Сохраняем текущие статусы опрашиваемых отчетов
     const oldReportsMap = new Map();
@@ -153,15 +145,13 @@ const loadReports = async (silent = false) => {
 // Опрос статуса для конкретного отчета
 const pollSingleReport = async (reportId) => {
   try {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`http://localhost:8080/api/wb/stats/${reportId}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
 
-    if (response.ok) {
-      const data = await response.json();
+    const response = await apiClient.get(`/wb/stats/${reportId}`);
+    if (response.status === 401) {
+      throw new Error('Требуется авторизация');
+    }
+    if (response.status === 200) {
+      const data = response.data;
       return {
         statusCode: data.status,
         comment: data.last_error || ''
@@ -261,24 +251,12 @@ const requestReport = async () => {
     const dateFrom = formData.value.dateFrom;
     const dateTo = formData.value.dateTo;
 
-    const response = await fetch('http://localhost:8080/api/wb/stats', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        dateFrom: dateFrom,
-        dateTo: dateTo
-      })
+    const response = await apiClient.post('/wb/stats', {
+      dateFrom: dateFrom,
+      dateTo: dateTo
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Ошибка создания отчета');
-    }
-
-    const result = await response.json();
+    const result = response.data;
 
     // Создаем новый отчет
     const newReport = {
@@ -331,6 +309,8 @@ const clearAllPolling = () => {
 
 // Инициализация
 onMounted(() => {
+  console.log('API URL from env:', import.meta.env.VITE_API_URL);
+  console.log('All env vars:', import.meta.env);
   loadReports();
   startAutoRefresh();
 });

@@ -3,7 +3,6 @@ package server
 import (
 	"net/http"
 	"wbrost-go/internal/handler"
-	"wbrost-go/internal/middleware"
 )
 
 func SetupRoutes(
@@ -91,7 +90,7 @@ func SetupRoutes(
 	})
 
 	// Apply CORS middleware
-	handler := middleware.CORS(mux)
+	//handler := middleware.CORS(mux)
 
-	return handler
+	return mux
 }

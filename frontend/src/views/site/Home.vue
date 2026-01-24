@@ -224,7 +224,7 @@
 <script>
 import { ref, onMounted, computed, onUnmounted } from 'vue'
 import { useStore } from 'vuex'
-import axios from 'axios'
+import apiClient from '@/api/client'  // Импортируй твой apiClient
 import Navbar from '@/components/layout/Navbar.vue'
 import Sidebar from '@/components/layout/Sidebar.vue'
 import LineChart from '@/components/charts/LineChart.vue'
@@ -421,7 +421,7 @@ export default {
         error.value = ''
 
         const token = localStorage.getItem('token')
-        const response = await axios.get('/api/dashboard/stats', {
+        const response = await apiClient.get('/dashboard/stats', {
           headers: {
             'Authorization': `Bearer ${token}`
           }

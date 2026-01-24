@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue';
 import Navbar from "../../components/layout/Navbar.vue";
 import Sidebar from "../../components/layout/Sidebar.vue";
+import apiClient from '@/api/client'
 
 // Реактивные данные формы
 const formData = ref({
@@ -21,16 +22,10 @@ const message = ref({ text: '', type: '' });
 // Получаем данные пользователя при загрузке
 const loadUserData = async () => {
   try {
-    const token = localStorage.getItem('token');
-    const response = await fetch('http://localhost:8080/api/auth/me', {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
+    const response = await apiClient.get('/auth/me');
 
-    if (response.ok) {
-      const userData = await response.json();
+    if (response.status === 200) {
+      const userData = response.data;
       // Заполняем форму данными пользователя
       formData.value = {
         name: userData.name || '',
@@ -54,18 +49,9 @@ const saveProfile = async () => {
   message.value = { text: '', type: '' };
 
   try {
-    const token = localStorage.getItem('token');
+    const response = await apiClient.post('/profile/update', formData.value);
 
-    const response = await fetch('http://localhost:8080/api/profile/update', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(formData.value)
-    });
-
-    const data = await response.json();
+    const data = response.data;
 
     if (response.ok) {
       message.value = {

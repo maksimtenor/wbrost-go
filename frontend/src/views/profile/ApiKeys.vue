@@ -2,6 +2,7 @@
 import Sidebar from "../../components/layout/Sidebar.vue";
 import Navbar from "../../components/layout/Navbar.vue";
 import { onMounted, ref } from 'vue';
+import apiClient from '@/api/client'
 
 const loading = ref(false);
 const wbStatus = ref({
@@ -25,18 +26,13 @@ const checkApiStatus = async () => {
       return;
     }
 
-    const response = await fetch('http://localhost:8080/api/profile/apikeys/status', {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
+    const response = await apiClient.get('/profile/apikeys/status');
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
 
-    const data = await response.json();
+    const data = response.data;
 
     wbStatus.value = {
       active: data.wildberries.active,

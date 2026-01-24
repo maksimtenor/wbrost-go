@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"wbrost-go/internal/config"
 	"wbrost-go/internal/handler"
+	"wbrost-go/internal/middleware"
 	"wbrost-go/internal/repository"
 	"wbrost-go/internal/server"
 	"wbrost-go/internal/service"
@@ -13,6 +14,11 @@ import (
 func main() {
 	// Загружаем конфигурацию
 	cfg := config.Load()
+
+	log.Printf("Starting server with config:")
+	log.Printf("  DB: %s@%s:%s/%s", cfg.DBUser, cfg.DBHost, cfg.DBPort, cfg.DBName)
+	log.Printf("  Server port: %s", cfg.ServerPort)
+	log.Printf("  Allowed origins: %v", cfg.AllowedOrigins)
 
 	// Формируем строку подключения к БД
 	connectionString := "host=" + cfg.DBHost +
@@ -46,12 +52,13 @@ func main() {
 
 	// Настраиваем маршруты
 	httpHandler := server.SetupRoutes(authHandler, wbStatsHandler, wbArticlesHandler)
+	// Обертываем в CORS middleware
+	handlerWithCORS := middleware.CORS(cfg)(httpHandler)
 
 	serverAddr := ":" + cfg.ServerPort
 	log.Printf("Server starting on %s", serverAddr)
 
-	// Запускаем сервер
-	if err := http.ListenAndServe(serverAddr, httpHandler); err != nil {
+	if err := http.ListenAndServe(serverAddr, handlerWithCORS); err != nil {
 		log.Fatal("Server failed:", err)
 	}
 }

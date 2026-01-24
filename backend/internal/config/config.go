@@ -7,14 +7,15 @@ import (
 )
 
 type Config struct {
-	DBHost     string
-	DBPort     string
-	DBUser     string
-	DBPassword string
-	DBName     string
-	ServerPort string
-	JWTSecret  string
-	Worker     WorkerConfig
+	DBHost         string
+	DBPort         string
+	DBUser         string
+	DBPassword     string
+	DBName         string
+	ServerPort     string
+	JWTSecret      string
+	Worker         WorkerConfig
+	AllowedOrigins []string
 }
 
 type WorkerConfig struct {
@@ -23,17 +24,35 @@ type WorkerConfig struct {
 }
 
 func Load() *Config {
+	// Читаем переменные окружения
+	dbPort := getEnv("DB_PORT", "")
+	serverPort := getEnv("SERVER_PORT", "")
+
+	// Определяем origins в зависимости от окружения
+	allowedOrigins := []string{
+		"http://localhost:3000",
+		"http://localhost:3001",
+		"http://localhost:8080",
+		"http://localhost:8081",
+	}
+
+	// Если в окружении заданы доп origins
+	if extraOrigins := os.Getenv("ALLOWED_ORIGINS"); extraOrigins != "" {
+		allowedOrigins = append(allowedOrigins, extraOrigins)
+	}
+
 	return &Config{
-		DBHost:     getEnv("DB_HOST", "localhost"),
-		DBPort:     getEnv("DB_PORT", "5432"),
-		DBUser:     getEnv("DB_USER", "postgres"),
-		DBPassword: getEnv("DB_PASSWORD", "123123123"),
-		DBName:     getEnv("DB_NAME", "wbrost_go"),
-		ServerPort: getEnv("SERVER_PORT", "8080"),
-		JWTSecret:  getEnv("JWT_SECRET", "your-secret-key"),
+		DBHost:         getEnv("DB_HOST", "localhost"),
+		DBPort:         dbPort,
+		DBUser:         getEnv("DB_USER", "postgres"),
+		DBPassword:     getEnv("DB_PASSWORD", "123123123"),
+		DBName:         getEnv("DB_NAME", "wbrost_go"),
+		ServerPort:     serverPort,
+		JWTSecret:      getEnv("JWT_SECRET", "your-secret-key"),
+		AllowedOrigins: allowedOrigins,
 		Worker: WorkerConfig{
-			Interval:         getEnvAsInt("WORKER_INTERVAL", 60),          // по умолчанию 60 секунд
-			ArticlesInterval: getEnvAsInt("WORKER_ARTICLES_INTERVAL", 60), // по умолчанию 60 секунд
+			Interval:         getEnvAsInt("WORKER_INTERVAL", 60),
+			ArticlesInterval: getEnvAsInt("WORKER_ARTICLES_INTERVAL", 60),
 		},
 	}
 }

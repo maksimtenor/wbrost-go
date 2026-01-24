@@ -3,6 +3,7 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import Navbar from "../../components/layout/Navbar.vue"
 import Sidebar from "../../components/layout/Sidebar.vue"
+import apiClient from '@/api/client'
 
 const router = useRouter()
 
@@ -48,28 +49,14 @@ const fetchProducts = async () => {
     loading.value = true
     error.value = ''
 
-    const token = localStorage.getItem('token')
-    if (!token) {
-      error.value = 'Необходима авторизация'
-      return
-    }
-
-    const response = await fetch('/api/articles', {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
+    const response = await apiClient.get('/articles',{
       params: {
         page: currentPage.value,
         pageSize: pageSize.value
       }
     })
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`)
-    }
-
-    const data = await response.json()
+    const data = response.data
     products.value = data.data || []
 
     // Пагинация (замените на реальные данные с сервера)
@@ -103,18 +90,11 @@ const requestProductsUpdate = async () => {
 
   try {
     loadingRequest.value = true
-    const token = localStorage.getItem('token')
-
-    const response = await fetch('http://localhost:8080/api/articles/request', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({})
+    const response = await apiClient.post('/articles/request', {
+      body: {}
     })
 
-    const data = await response.json()
+    const data = response.data
 
     if (data.success) {
       // Показать уведомление об успехе
@@ -141,23 +121,11 @@ const updateCostPrice = async (articule, costPrice) => {
   }
 
   try {
-    const token = localStorage.getItem('token')
-
-    const response = await fetch('http://localhost:8080/api/articles/cost-price', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        articule: articule,
-        cost_price: costPrice
-      })
+    const response = await apiClient.post('/articles/cost-price', {
+      articule: articule,
+      cost_price: costPrice
     })
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`)
-    }
 
     // Обновляем данные на странице
     const product = products.value.find(p => p.articule === articule)

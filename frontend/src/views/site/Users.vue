@@ -3,7 +3,7 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Navbar from "../../components/layout/Navbar.vue"
 import Sidebar from "../../components/layout/Sidebar.vue"
-import axios from "axios";
+import apiClient from "../../api/client";
 
 const route = useRoute()
 const router = useRouter()
@@ -66,7 +66,7 @@ const fetchUsers = async () => {
       return
     }
 
-    const response = await axios.get('/api/site/users', {
+    const response = await apiClient.get('/site/users', {
       headers: {
         'Authorization': `Bearer ${token}`
       },

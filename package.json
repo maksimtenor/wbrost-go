@@ -1,5 +1,24 @@
 {
-  "dependencies": {
-    "chart.js": "^4.5.1"
+  "name": "wbrost-go",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "make dev",
+    "prod": "make prod",
+    "build": "make prod-build",
+    "down": "make dev-down",
+    "logs": "make dev-logs",
+    "clean": "make clean",
+    "db:shell": "make db-shell",
+    "db:backup": "make db-backup",
+    "pgadmin": "make pgadmin",
+    "status": "make status"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
   }
 }

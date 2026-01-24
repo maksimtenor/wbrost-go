@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import apiClient from '@/api/client'
 import axios from 'axios'
 import Navbar from "../../components/layout/Navbar.vue"
 import Sidebar from "../../components/layout/Sidebar.vue"
@@ -57,10 +58,7 @@ const fetchStatDetails = async () => {
       return
     }
 
-    const response = await axios.get('/api/stat/details', {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      },
+    const response = await apiClient.get('/stat/details', {
       params: {
         dateFrom: dateFrom.value,
         dateTo: dateTo.value,
