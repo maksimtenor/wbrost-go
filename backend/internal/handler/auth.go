@@ -545,6 +545,79 @@ func (h *AuthHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (h *AuthHandler) UpdateUserParams(w http.ResponseWriter, r *http.Request) {
+	// 1. Проверяем авторизацию
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		respondWithJSON(w, http.StatusUnauthorized, entity.ErrorResponse{Error: "No authorization header"})
+		return
+	}
+
+	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		return h.jwtSecret, nil
+	})
+
+	if err != nil || !token.Valid {
+		respondWithJSON(w, http.StatusUnauthorized, entity.ErrorResponse{Error: "Invalid token"})
+		return
+	}
+
+	// 2. Получаем username из токена
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		respondWithJSON(w, http.StatusUnauthorized, entity.ErrorResponse{Error: "Invalid token claims"})
+		return
+	}
+
+	username, ok := claims["username"].(string)
+	if !ok {
+		respondWithJSON(w, http.StatusUnauthorized, entity.ErrorResponse{Error: "Invalid username in token"})
+		return
+	}
+
+	// 3. Получаем текущего пользователя
+	currentUser, err := h.authService.GetUserByUsername(username)
+	if err != nil {
+		respondWithJSON(w, http.StatusNotFound, entity.ErrorResponse{Error: "User not found"})
+		return
+	}
+
+	// 4. Проверяем права администратора
+	if currentUser.Admin < 1 {
+		respondWithJSON(w, http.StatusForbidden, entity.ErrorResponse{Error: "Admin rights required"})
+		return
+	}
+
+	// Парсим JSON из тела запроса
+	var req entity.UserRequest
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	// Проверяем обязательные поля
+	if req.UserId == 0 || req.ActionType == "" {
+		http.Error(w, "Missing required fields", http.StatusBadRequest)
+		return
+	}
+
+	// Обрабатываем данные
+	err = h.authService.UpdateUserFromParams(req.UserId, req.ActionType, req.Value)
+	if err != nil {
+		http.Error(w, "Failed to update user", http.StatusInternalServerError)
+		return
+	}
+
+	// 8. Возвращаем успешный ответ
+	respondWithJSON(w, http.StatusOK, map[string]interface{}{
+		"success": true,
+		"message": "User updated successfully",
+	})
+}
+
 func (h *AuthHandler) getUserFromRequest(r *http.Request) (*repository.User, error) {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {

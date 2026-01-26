@@ -34,6 +34,12 @@ type SignupRequest struct {
 	Password string `json:"password"`
 }
 
+type UserRequest struct {
+	UserId     int    `json:"userId"`
+	ActionType string `json:"actionType"`
+	Value      int    `json:"value"`
+}
+
 type ErrorResponse struct {
 	Error string `json:"error"`
 }

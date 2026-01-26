@@ -53,7 +53,7 @@ const saveProfile = async () => {
 
     const data = response.data;
 
-    if (response.ok) {
+    if (response.status === 200) {
       message.value = {
         text: 'Данные успешно сохранены!',
         type: 'success'

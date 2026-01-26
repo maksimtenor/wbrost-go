@@ -50,7 +50,7 @@ func (r *UserRepository) GetAll(page, pageSize int) ([]entity.User, error) {
         id_user, taxes, username, password, email, admin, block, pro, 
         name, phone, wb_key, ozon_key, u2782212_wbrosus, ozon_status,
         created_at, updated_at, del, last_login
-        FROM users
+        FROM users where del = 0
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2`
 
@@ -132,6 +132,101 @@ func (r *UserRepository) GetByUsername(username string) (*User, error) {
 	}
 
 	return &user, nil
+}
+
+func (r *UserRepository) GetByUserId(userId int) (*User, error) {
+	query := `SELECT 
+        id_user, taxes, username, password, email, admin, block, pro, 
+        name, phone, wb_key, ozon_key, u2782212_wbrosus, ozon_status,
+        created_at, updated_at, del, last_login
+        FROM users 
+        WHERE id = $1 AND del = 0`
+
+	row := r.db.QueryRow(query, userId)
+
+	var user User
+
+	err := row.Scan(
+		&user.ID,
+		&user.Taxes,
+		&user.Username,
+		&user.PasswordHash,
+		&user.Email,
+		&user.Admin,
+		&user.Block,
+		&user.Pro,
+		&user.Name,
+		&user.Phone,
+		&user.WbKey,
+		&user.OzonKey,
+		&user.U2782212Wbrosus,
+		&user.OzonStatus,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+		&user.Del,
+		&user.LastLogin,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("user not found")
+		}
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
+
+	return &user, nil
+}
+
+// UpdateUserPro обновляет пользователя PRO
+func (r *UserRepository) UpdateUserPro(userId, value int) error {
+	query := `
+		UPDATE users 
+		SET pro = $1, updated_at = $2
+		WHERE id_user = $3
+	`
+
+	_, err := r.db.Exec(query, value, time.Now(), userId)
+
+	return err
+}
+
+// UpdateUserAdmin обновляет пользователя Admin
+func (r *UserRepository) UpdateUserAdmin(userId, value int) error {
+	query := `
+		UPDATE users 
+		SET admin = $1, updated_at = $2
+		WHERE id_user = $3
+	`
+
+	_, err := r.db.Exec(query, value, time.Now(), userId)
+
+	return err
+}
+
+// UpdateUserBlock обновляет пользователя BLOCK
+func (r *UserRepository) UpdateUserBlock(userId, value int) error {
+	query := `
+		UPDATE users 
+		SET block = $1, updated_at = $2
+		WHERE id_user = $3
+	`
+
+	_, err := r.db.Exec(query, value, time.Now(), userId)
+
+	return err
+}
+
+// UpdateUserDel обновляет пользователя DEL
+func (r *UserRepository) UpdateUserDel(userId, value int) error {
+	query := `
+		UPDATE users 
+		SET del = $1, updated_at = $2
+		WHERE id_user = $3
+	`
+
+	_, err := r.db.Exec(query, value, time.Now(), userId)
+
+	return err
 }
 
 func (r *UserRepository) GetByEmail(email string) (*User, error) {

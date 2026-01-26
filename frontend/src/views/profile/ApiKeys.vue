@@ -16,22 +16,7 @@ const checkApiStatus = async () => {
   wbStatus.value.message = 'Проверка...';
 
   try {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      wbStatus.value = {
-        active: false,
-        message: 'Требуется авторизация',
-        lastCheck: new Date()
-      };
-      return;
-    }
-
     const response = await apiClient.get('/profile/apikeys/status');
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-
     const data = response.data;
 
     wbStatus.value = {

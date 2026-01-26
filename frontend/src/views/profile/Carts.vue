@@ -92,7 +92,7 @@ const requestProductsUpdate = async () => {
     loadingRequest.value = true
     const response = await apiClient.post('/articles/request', {
       body: {}
-    })
+    });
 
     const data = response.data
 
@@ -519,7 +519,6 @@ watch(pageSize, () => {
 }
 
 .products-container {
-  //max-width: 1400px;
   margin: 0 auto;
   padding: 0 20px;
 }

@@ -28,6 +28,10 @@ func (s *AuthService) GetUserByUsername(username string) (*repository.User, erro
 	return s.userRepo.GetByUsername(username)
 }
 
+func (s *AuthService) GetUserByUserId(userId int) (*repository.User, error) {
+	return s.userRepo.GetByUserId(userId)
+}
+
 func (s *AuthService) GetAllUsers(page, pageSize int) ([]entity.User, error) {
 	return s.userRepo.GetAll(page, pageSize)
 }
@@ -52,4 +56,30 @@ func (s *AuthService) CreateUser(dto CreateUserDTO) (*repository.User, error) {
 	}
 
 	return s.userRepo.Create(user)
+}
+
+func (s *AuthService) UpdateUserFromParams(UserId int, ActionType string, Value int) error {
+	switch ActionType {
+	case "admin":
+		err := s.userRepo.UpdateUserAdmin(UserId, Value)
+		if err != nil {
+			return err
+		}
+	case "pro":
+		err := s.userRepo.UpdateUserPro(UserId, Value)
+		if err != nil {
+			return err
+		}
+	case "block":
+		err := s.userRepo.UpdateUserBlock(UserId, Value)
+		if err != nil {
+			return err
+		}
+	case "del":
+		err := s.userRepo.UpdateUserDel(UserId, Value)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

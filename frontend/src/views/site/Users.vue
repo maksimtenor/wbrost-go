@@ -3,16 +3,18 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Navbar from "../../components/layout/Navbar.vue"
 import Sidebar from "../../components/layout/Sidebar.vue"
-import apiClient from "../../api/client";
+import apiClient from '@/api/client'
 
 const route = useRoute()
 const router = useRouter()
 
 // Данные
 const users = ref([])
+const params = ref([])
 const loading = ref(false)
 // const loadingRequest = ref(false)
 const error = ref('')
+const successMessage = ref('')
 // const searchQuery = ref('')
 
 // Пагинация
@@ -38,10 +40,18 @@ const pagesArray = computed(() => {
 
   return pages
 })
+
 const truncateText = (text, maxLength) => {
   if (!text) return '';
   return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
 };
+
+const confirmDelete = (userId) => {
+  if (confirm('Вы уверены, что хотите удалить пользователя?')) {
+    saveUpdateUser({userId: userId, actionType: 'del', value: 1})
+  }
+}
+
 const isRecentLogin = (dateString) => {
   if (!dateString) return false;
   const date = new Date(dateString);
@@ -49,6 +59,7 @@ const isRecentLogin = (dateString) => {
   const diffDays = (now - date) / (1000 * 60 * 60 * 24);
   return diffDays <= 30; // Последние 30 дней
 };
+
 // Загрузка карточек товаров
 const fetchUsers = async () => {
   if (!localStorage.getItem('token')) {
@@ -134,7 +145,64 @@ const formatDate = (dateString) => {
     year: 'numeric'
   })
 }
+const requestUserUpdate = async (params) => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      showMessage('❌ Требуется авторизация', 'error');
+      return;
+    }
 
+    console.log('Sending update request:', params);
+
+    const response = await apiClient.post('/user/update', params);
+
+    console.log('Full response:', response);
+    console.log('Response data:', response.data);
+
+    // Проверяем успешность по data.success или статусу
+    if (response.status === 200 && response.data?.success !== false) {
+      const userIndex = users.value.findIndex(p => p.id === params.userId);
+
+      if (userIndex !== -1) {
+        if (params.actionType === 'del' && params.value === 1) {
+          users.value.splice(userIndex, 1);
+          showMessage(`✅ Пользователь удалён`, 'success');
+        } else {
+          users.value[userIndex][params.actionType] = params.value;
+          // Обновляем реактивность
+          users.value = [...users.value];
+          showMessage(`✅ Пользователь обновлён`, 'success');
+        }
+      }
+    } else {
+      // Сервер вернул ошибку в теле ответа
+      showMessage(`❌ ${response.data?.message || 'Ошибка обновления'}`, 'error');
+    }
+
+  } catch (err) {
+    console.error('Error updating user data:', err);
+
+    let errorMsg = '❌ Ошибка обновления';
+    if (err.response?.data?.error) {
+      errorMsg += `: ${err.response.data.error}`;
+    } else if (err.message) {
+      errorMsg += `: ${err.message}`;
+    }
+
+    showMessage(errorMsg, 'error');
+  }
+}
+const saveUpdateUser = (params) => {
+  requestUserUpdate(params)
+}
+// Вспомогательная функция для сообщений
+const showMessage = (text, type) => {
+  error.value = text
+  setTimeout(() => {
+    error.value = ''
+  }, 3000)
+}
 onMounted(() => {
   if (route.query.page) currentPage.value = parseInt(route.query.page) || 1
 
@@ -182,6 +250,23 @@ onMounted(() => {
 
       <div class="content">
         <div class="users-container">
+          <!-- В начале content, перед summary-info -->
+          <div v-if="error" class="message-box message-error">
+            <svg class="message-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <span>{{ error }}</span>
+          </div>
+
+          <div v-if="successMessage" class="message-box message-success">
+            <svg class="message-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            <span>{{ successMessage }}</span>
+          </div>
           <!-- Информация о записях -->
           <div class="summary-info">
             <svg class="summary-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -314,9 +399,9 @@ onMounted(() => {
                     <span class="name-value">{{ user.name }}</span>
                   </td>
                   <td class="table-blocked">
-                      <span :class="['status-badge', user.blocked ? 'status-error' : 'status-success']">
+                      <span :class="['status-badge', user.block ? 'status-error' : 'status-success']">
                         <span class="status-icon">
-                          <svg v-if="user.blocked" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <svg v-if="user.block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="10"></circle>
                             <line x1="15" y1="9" x2="9" y2="15"></line>
                             <line x1="9" y1="9" x2="15" y2="15"></line>
@@ -326,7 +411,7 @@ onMounted(() => {
                             <polyline points="22 4 12 14.01 9 11.01"></polyline>
                           </svg>
                         </span>
-                        <span class="status-text">{{ user.blocked ? 'Да' : 'Нет' }}</span>
+                        <span class="status-text">{{ user.block ? 'Да' : 'Нет' }}</span>
                       </span>
                   </td>
                   <td class="table-pro">
@@ -409,10 +494,8 @@ onMounted(() => {
                       <template v-if="user.pro">
                         <button
                             class="action-btn action-danger"
-                            :href="`/user/activate-pro?params[id_user]=${user.id}&params[set-pro]=0`"
-                            @click.prevent="handleAction('removePro', user.id)"
-                            title="Забрать Pro"
-                        >
+                            @click="saveUpdateUser({userId: user.id, actionType: 'pro', value: 0})"
+                            title="Забрать Pro">
                           <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="10"></circle>
                             <line x1="15" y1="9" x2="9" y2="15"></line>
@@ -421,14 +504,25 @@ onMounted(() => {
                           Pro - забрать
                         </button>
                       </template>
+                      <template v-if="user.pro">
+                        <button
+                            class="action-btn action-success"
+                            @click="saveUpdateUser({userId: user.id, actionType: 'pro', value: 1})"
+                            title="Выдать Pro">
+                          <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="15" y1="9" x2="9" y2="15"></line>
+                            <line x1="9" y1="9" x2="15" y2="15"></line>
+                          </svg>
+                          Pro - выдать
+                        </button>
+                      </template>
 
                       <template v-if="!user.admin">
                         <button
                             class="action-btn action-success"
-                            :href="`/user/activate-pro?params[id_user]=${user.id}&params[set-admin]=2`"
-                            @click.prevent="handleAction('makeAdmin', user.id)"
-                            title="Сделать администратором"
-                        >
+                            @click="saveUpdateUser({userId: user.id, actionType: 'admin', value: 1})"
+                            title="Сделать администратором">
                           <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                             <polyline points="22 4 12 14.01 9 11.01"></polyline>
@@ -436,12 +530,23 @@ onMounted(() => {
                           Admin - выдать
                         </button>
                       </template>
-
-                      <template v-if="!user.blocked">
+                      <template v-if="user.admin">
                         <button
                             class="action-btn action-danger"
-                            :href="`/user/activate-pro?params[id_user]=${user.id}&params[set-block]=1`"
-                            @click.prevent="handleAction('block', user.id)"
+                            @click="saveUpdateUser({userId: user.id, actionType: 'admin', value: 0})"
+                            title="Забрать админ права">
+                          <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                          </svg>
+                          Admin - забрать
+                        </button>
+                      </template>
+
+                      <template v-if="!user.block">
+                        <button
+                            class="action-btn action-danger"
+                            @click="saveUpdateUser({userId: user.id, actionType: 'block', value: 1})"
                             title="Заблокировать пользователя"
                         >
                           <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -451,11 +556,23 @@ onMounted(() => {
                           Заблокировать
                         </button>
                       </template>
+                      <template v-if="user.block">
+                        <button
+                            class="action-btn action-success"
+                            @click="saveUpdateUser({userId: user.id, actionType: 'block', value: 0})"
+                            title="Разблокиовать пользователя"
+                        >
+                          <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                          </svg>
+                          Разблокиовать
+                        </button>
+                      </template>
 
                       <button
                           class="action-btn action-danger"
-                          :href="`/user/activate-pro?params[id_user]=${user.id}&params[set-del-user]=1`"
-                          @click.prevent="handleAction('delete', user.id)"
+                          @click="confirmDelete(user.id)"
                           title="Удалить пользователя"
                       >
                         <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -549,7 +666,6 @@ onMounted(() => {
 }
 
 .users-container {
-  //max-width: 1400px;
   margin: 0 auto;
   padding: 0 20px;
 }
@@ -1000,5 +1116,48 @@ onMounted(() => {
   color: white;
   border-color: #4f46e5;
   box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+}
+
+/* Добавьте в стили */
+.message-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  font-weight: 500;
+  animation: slideDown 0.3s ease-out;
+}
+
+.message-success {
+  background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+  color: #155724;
+  border: 1px solid #b8dcc5;
+  box-shadow: 0 4px 12px rgba(21, 87, 36, 0.1);
+}
+
+.message-error {
+  background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+  color: #721c24;
+  border: 1px solid #f1b0b7;
+  box-shadow: 0 4px 12px rgba(114, 28, 36, 0.1);
+}
+
+.message-icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 </style>

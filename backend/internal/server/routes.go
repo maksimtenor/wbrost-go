@@ -21,6 +21,9 @@ func SetupRoutes(
 	mux.HandleFunc("/api/profile/apikeys/status", authHandler.GetApiKeysStatus)
 	mux.HandleFunc("/api/profile/update", authHandler.UpdateProfile)
 
+	// Обновление пользователя из админки (заблокировать, удалить, выдать права или забрать PRO)
+	mux.HandleFunc("/api/user/update", authHandler.UpdateUserParams)
+
 	// WB-Отчеты Роуты
 	mux.HandleFunc("/api/wb/stats", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
