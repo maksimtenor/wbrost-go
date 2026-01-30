@@ -91,7 +91,7 @@ services:
       DB_PASSWORD: 123123123
       DB_NAME: wbrost_go
       JWT_SECRET: "your-secret-key"
-      WORKER_ARTICLES_INTERVAL: "3600"
+      WORKER_ARTICLES_INTERVAL: "60"
     command: ./articles_worker
     restart: unless-stopped
 volumes:

@@ -1,11 +1,11 @@
-// src/services/dataRefresh.js
 import { authAPI } from '@/api/auth'
 import store from '@/store'
+const REFRESH_INTERVAL = import.meta.env.REFRESH_INTERVAL
 
 class DataRefreshService {
     constructor() {
         this.intervalId = null
-        this.refreshInterval = 30000 // 30 секунд
+        this.refreshInterval = REFRESH_INTERVAL // 30 секунд
     }
 
     start() {

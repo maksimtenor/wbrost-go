@@ -1,6 +1,5 @@
 import axios from 'axios'
-
-const API_URL = 'http://localhost:8081/api' // порт вашего Go сервера
+const API_URL = import.meta.env.VITE_API_URL // base url вашего Go сервера
 
 const apiClient = axios.create({
     baseURL: API_URL,

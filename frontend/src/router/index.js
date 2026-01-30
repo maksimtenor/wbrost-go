@@ -1,6 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
-// Views
 import Home from '@/views/site/Home.vue'
 import Login from '@/views/site/Login.vue'
 import Signup from '@/views/site/Signup.vue'
@@ -90,7 +89,7 @@ const routes = [
         component: GetReports,
         meta: { guestOnly: true }
     },
-    // Можно добавить catch-all маршрут в конце
+
     {
         path: '/:pathMatch(.*)*',
         redirect: '/'

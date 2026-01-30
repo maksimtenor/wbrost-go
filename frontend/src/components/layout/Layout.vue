@@ -1,8 +1,5 @@
 <template>
   <div class="wrapper">
-<!--    <Navbar />-->
-<!--    <Sidebar />-->
-
     <router-view />
   </div>
 </template>

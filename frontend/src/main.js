@@ -8,12 +8,9 @@ import { dataRefreshService } from '@/service/dataRefresh'
 import '@/assets/css/v4-shims.css'
 import '@fortawesome/fontawesome-free/css/all.css'
 import '@/assets/css/landing/style.css'
-// import '@/assets/css/landing/font/inter.css'
 import '@/assets/css/landing/main.min.css'
-// import '@/assets/css/landing/main.min.rtl.css'
 import '@/assets/css/site.css'
 import '@/assets/css/adminlte.css'
-// import '@/assets/css/adminlte.min.css'
 
 // Создаем приложение
 const app = createApp(App)

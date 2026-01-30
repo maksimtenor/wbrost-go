@@ -4,6 +4,8 @@ import { useRoute, useRouter } from 'vue-router'
 import Navbar from "../../components/layout/Navbar.vue"
 import Sidebar from "../../components/layout/Sidebar.vue"
 import apiClient from '@/api/client'
+import BaseLayout from "../../components/layout/BaseLayout.vue";
+import BasicForm from "../../components/layout/forms/BasicForm.vue";
 
 const route = useRoute()
 const router = useRouter()
@@ -12,16 +14,16 @@ const router = useRouter()
 const users = ref([])
 const params = ref([])
 const loading = ref(false)
-// const loadingRequest = ref(false)
 const error = ref('')
 const successMessage = ref('')
-// const searchQuery = ref('')
 
 // Пагинация
 const currentPage = ref(1)
 const pageSize = ref(20)
 const totalItems = ref(0)
 const totalPages = ref(0)
+
+const DEFAULT_TIMEOUT = import.meta.env.DEFAULT_TIMEOUT;
 
 // Вычисляемое свойство для отображения страниц
 const pagesArray = computed(() => {
@@ -167,17 +169,21 @@ const requestUserUpdate = async (params) => {
       if (userIndex !== -1) {
         if (params.actionType === 'del' && params.value === 1) {
           users.value.splice(userIndex, 1);
-          showMessage(`✅ Пользователь удалён`, 'success');
+          showMessage(`✅ Пользователь удалён`, 'error');
         } else {
           users.value[userIndex][params.actionType] = params.value;
           // Обновляем реактивность
           users.value = [...users.value];
-          showMessage(`✅ Пользователь обновлён`, 'success');
+          if (params.value < 1) {
+            showMessage(`✅ Пользователь обновлён`, 'error');
+          } else {
+            showMessage(`✅ Пользователь обновлён`, 'success');
+          }
         }
       }
     } else {
       // Сервер вернул ошибку в теле ответа
-      showMessage(`❌ ${response.data?.message || 'Ошибка обновления'}`, 'error');
+      showMessage(`❌ ${response.data?.message || 'Ошибка обновления от сервера'}`, 'error');
     }
 
   } catch (err) {
@@ -201,7 +207,7 @@ const showMessage = (text, type) => {
   error.value = text
   setTimeout(() => {
     error.value = ''
-  }, 3000)
+  }, DEFAULT_TIMEOUT)
 }
 onMounted(() => {
   if (route.query.page) currentPage.value = parseInt(route.query.page) || 1
@@ -209,74 +215,63 @@ onMounted(() => {
   fetchUsers()
 })
 </script>
-
 <template>
-  <div class="wrapper hold-transition sidebar-mini">
-    <!-- Navbar -->
-    <Navbar />
-    <!-- Main Sidebar Container -->
-    <Sidebar />
+  <BaseLayout>
+    <!-- Заголовок страницы -->
+    <template #title-icon>
+      <svg class="title-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+    </template>
 
-    <div class="content-wrapper">
-      <!-- Content Header -->
-      <div class="content-header">
-        <div class="container-fluid">
-          <div class="row mb-2">
-            <div class="col-sm-6">
-              <h1 class="page-title">
-                <svg class="title-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                  <circle cx="12" cy="7" r="4"></circle>
-                </svg>
-                Пользователи
-              </h1>
-            </div>
-            <div class="col-sm-6 text-right">
-              <div class="total-items">
-                <svg class="total-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="8" y1="6" x2="21" y2="6"></line>
-                  <line x1="8" y1="12" x2="21" y2="12"></line>
-                  <line x1="8" y1="18" x2="21" y2="18"></line>
-                  <line x1="3" y1="6" x2="3.01" y2="6"></line>
-                  <line x1="3" y1="12" x2="3.01" y2="12"></line>
-                  <line x1="3" y1="18" x2="3.01" y2="18"></line>
-                </svg>
-                <span>Всего пользователей: {{totalItems}}</span>
-              </div>
-            </div>
-          </div>
-        </div>
+    <template #title>Пользователи</template>
+
+    <template #header-right>
+      <div class="total-items">
+        <svg class="total-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <line x1="8" y1="6" x2="21" y2="6"></line>
+          <line x1="8" y1="12" x2="21" y2="12"></line>
+          <line x1="8" y1="18" x2="21" y2="18"></line>
+        </svg>
+        <span>Всего пользователей: {{ formatNumber(totalItems) }}</span>
       </div>
+    </template>
 
-      <div class="content">
-        <div class="users-container">
-          <!-- В начале content, перед summary-info -->
-          <div v-if="error" class="message-box message-error">
-            <svg class="message-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"></circle>
-              <line x1="12" y1="8" x2="12" y2="12"></line>
-              <line x1="12" y1="16" x2="12.01" y2="16"></line>
-            </svg>
-            <span>{{ error }}</span>
-          </div>
+    <!-- Основной контент -->
+    <BasicForm>
+      <!-- Сообщения -->
+      <template #messages>
+        <div v-if="error" class="message-box message-error">
+          <svg class="message-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <span>{{ error }}</span>
+        </div>
 
-          <div v-if="successMessage" class="message-box message-success">
-            <svg class="message-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-              <polyline points="22 4 12 14.01 9 11.01"></polyline>
-            </svg>
-            <span>{{ successMessage }}</span>
-          </div>
-          <!-- Информация о записях -->
-          <div class="summary-info">
-            <svg class="summary-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"></circle>
-              <polyline points="12 6 12 12 16 14"></polyline>
-            </svg>
-            <span>Показаны записи <strong>1-{{ users.length }}</strong> из <strong>{{ formatNumber(totalItems) }}</strong></span>
-          </div>
+        <div v-if="successMessage" class="message-box message-success">
+          <svg class="message-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+          <span>{{ successMessage }}</span>
+        </div>
+      </template>
 
-          <!-- Таблица пользователей -->
+      <!-- Ваш основной контент -->
+      <div class="users-container">
+        <div class="summary-info">
+          <svg class="summary-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          <span>Показаны записи <strong>1-{{ users.length }}</strong> из <strong>{{ formatNumber(totalItems) }}</strong></span>
+        </div>
+
+        <!-- Таблица пользователей (ваш код) -->
+        <div class="users-table-container">
           <div class="users-table-container">
             <div class="table-header">
               <svg class="table-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -504,7 +499,7 @@ onMounted(() => {
                           Pro - забрать
                         </button>
                       </template>
-                      <template v-if="user.pro">
+                      <template v-if="!user.pro">
                         <button
                             class="action-btn action-success"
                             @click="saveUpdateUser({userId: user.id, actionType: 'pro', value: 1})"
@@ -630,534 +625,10 @@ onMounted(() => {
           </div>
         </div>
       </div>
-    </div>
-  </div>
+    </BasicForm>
+  </BaseLayout>
 </template>
 
 <style scoped>
-.page-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 28px;
-  font-weight: 700;
-  color: #1a202c;
-  margin: 0;
-}
-
-.title-icon {
-  width: 32px;
-  height: 32px;
-  color: #4f46e5;
-}
-
-.total-items {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #6b7280;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.total-icon {
-  width: 18px;
-  height: 18px;
-}
-
-.users-container {
-  margin: 0 auto;
-  padding: 0 20px;
-}
-
-.summary-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
-  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
-  border-radius: 10px;
-  margin-bottom: 20px;
-  font-size: 14px;
-  color: #374151;
-  border: 1px solid #d1d5db;
-}
-
-.summary-icon {
-  width: 16px;
-  height: 16px;
-  color: #6b7280;
-}
-
-.users-table-container {
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-  margin-bottom: 24px;
-}
-
-.table-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 24px 24px 0;
-  margin-bottom: 16px;
-}
-
-.table-icon {
-  width: 24px;
-  height: 24px;
-  color: #4f46e5;
-}
-
-.table-header h3 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: #1a202c;
-}
-
-.table-wrapper {
-  overflow-x: auto;
-  padding: 0 24px 24px;
-}
-
-.users-table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 1800px;
-}
-
-.users-table thead {
-  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
-  border-bottom: 2px solid #e5e7eb;
-}
-
-.users-table th {
-  padding: 16px 12px;
-  text-align: left;
-  font-size: 12px;
-  font-weight: 600;
-  color: #374151;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  white-space: nowrap;
-}
-
-.sort-link {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  color: inherit;
-  text-decoration: none;
-  transition: color 0.2s ease;
-}
-
-.sort-link:hover {
-  color: #4f46e5;
-}
-
-.sort-icon {
-  width: 12px;
-  height: 12px;
-}
-
-.sort-link.desc .sort-icon {
-  transform: rotate(180deg);
-}
-
-.users-table tbody tr {
-  border-bottom: 1px solid #e5e7eb;
-  transition: background-color 0.2s ease;
-}
-
-.users-table tbody tr:hover {
-  background-color: #f9fafb;
-}
-
-.users-table tbody tr:last-child {
-  border-bottom: none;
-}
-
-.users-table td {
-  padding: 16px 12px;
-  vertical-align: middle;
-}
-
-/* Стили для содержимого таблицы */
-.id-value {
-  font-size: 13px;
-  font-weight: 600;
-  color: #6b7280;
-  background: #f3f4f6;
-  padding: 4px 8px;
-  border-radius: 6px;
-  display: inline-block;
-}
-
-.login-value,
-.email-value,
-.name-value {
-  font-size: 14px;
-  color: #1a202c;
-  max-width: 150px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  display: block;
-}
-
-.email-value {
-  color: #4f46e5;
-  font-weight: 500;
-}
-
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.status-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 14px;
-  height: 14px;
-}
-
-.status-icon svg {
-  width: 100%;
-  height: 100%;
-}
-
-.status-success {
-  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-  color: #065f46;
-  border: 1px solid #10b981;
-}
-
-.status-error {
-  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-  color: #991b1b;
-  border: 1px solid #ef4444;
-}
-
-.status-pro {
-  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
-  color: #3730a3;
-  border: 1px solid #4f46e5;
-}
-
-.status-basic {
-  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
-  color: #4b5563;
-  border: 1px solid #9ca3af;
-}
-
-.status-admin {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-  color: #92400e;
-  border: 1px solid #f59e0b;
-}
-
-.status-user {
-  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
-  color: #4b5563;
-  border: 1px solid #9ca3af;
-}
-
-.phone-value {
-  font-size: 13px;
-  color: #374151;
-  font-weight: 500;
-}
-
-.tax-value {
-  font-size: 14px;
-  font-weight: 600;
-  color: #6b7280;
-  background: #f3f4f6;
-  padding: 6px 12px;
-  border-radius: 6px;
-  display: inline-block;
-}
-
-.tax-active {
-  color: #10b981;
-  background: #d1fae5;
-  border: 1px solid #10b981;
-}
-
-.date-container {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.date-icon {
-  width: 14px;
-  height: 14px;
-  color: #6b7280;
-  flex-shrink: 0;
-}
-
-.date-value {
-  font-size: 12px;
-  color: #6b7280;
-}
-
-.login-recent {
-  color: #10b981;
-  font-weight: 500;
-}
-
-.login-old {
-  color: #ef4444;
-  font-weight: 500;
-}
-
-.wb-key-value {
-  font-size: 12px;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  color: #6b7280;
-  background: #f3f4f6;
-  padding: 4px 8px;
-  border-radius: 4px;
-  display: inline-block;
-  max-width: 120px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  cursor: help;
-}
-
-.action-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 160px;
-}
-
-.action-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  border: none;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-decoration: none;
-  width: 100%;
-  text-align: left;
-}
-
-.action-btn:hover {
-  transform: translateY(-1px);
-}
-
-.action-success {
-  background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
-  color: white;
-  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
-}
-
-.action-success:hover {
-  background: linear-gradient(135deg, #0da271 0%, #10b981 100%);
-  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
-}
-
-.action-danger {
-  background: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
-  color: white;
-  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
-}
-
-.action-danger:hover {
-  background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
-  box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
-}
-
-.action-icon {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-}
-
-/* Адаптивность */
-@media (max-width: 768px) {
-  .users-table {
-    min-width: 1500px;
-  }
-
-  .table-header {
-    padding: 20px 20px 0;
-  }
-
-  .table-wrapper {
-    padding: 0 20px 20px;
-  }
-
-  .action-buttons {
-    min-width: 140px;
-  }
-
-  .action-btn {
-    padding: 6px 10px;
-    font-size: 11px;
-  }
-}
-
-@media (max-width: 480px) {
-  .page-title {
-    font-size: 24px;
-  }
-
-  .title-icon {
-    width: 28px;
-    height: 28px;
-  }
-
-  .users-container {
-    padding: 0 16px;
-  }
-}
-.pagination-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border: 2px solid #e5e7eb;
-  border-radius: 10px;
-  background: white;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.pagination-btn:hover:not(:disabled) {
-  border-color: #4f46e5;
-  background: #f5f3ff;
-}
-
-.pagination-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.pagination-icon {
-  width: 20px;
-  height: 20px;
-  color: #374151;
-}
-
-.pagination-pages {
-  display: flex;
-  gap: 8px;
-}
-.pagination-info {
-  margin-left: 16px;
-  font-size: 14px;
-  color: #6b7280;
-}
-/* Адаптивность */
-@media (max-width: 768px) {
-  .pagination {
-    flex-wrap: wrap;
-    gap: 12px;
-  }
-
-  .pagination-info {
-    width: 100%;
-    text-align: center;
-    margin-left: 0;
-    margin-top: 8px;
-  }
-}
-.page-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 28px;
-  font-weight: 700;
-  color: #1a202c;
-  margin: 0;
-}
-.page-btn {
-  min-width: 40px;
-  height: 40px;
-  padding: 0 8px;
-  border: 2px solid #e5e7eb;
-  border-radius: 10px;
-  background: white;
-  font-size: 14px;
-  font-weight: 500;
-  color: #374151;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.page-btn:hover:not(.active) {
-  border-color: #4f46e5;
-  background: #f5f3ff;
-}
-
-.page-btn.active {
-  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
-  color: white;
-  border-color: #4f46e5;
-  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
-}
-
-/* Добавьте в стили */
-.message-box {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 20px;
-  border-radius: 12px;
-  margin-bottom: 24px;
-  font-weight: 500;
-  animation: slideDown 0.3s ease-out;
-}
-
-.message-success {
-  background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
-  color: #155724;
-  border: 1px solid #b8dcc5;
-  box-shadow: 0 4px 12px rgba(21, 87, 36, 0.1);
-}
-
-.message-error {
-  background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
-  color: #721c24;
-  border: 1px solid #f1b0b7;
-  box-shadow: 0 4px 12px rgba(114, 28, 36, 0.1);
-}
-
-.message-icon {
-  width: 24px;
-  height: 24px;
-  flex-shrink: 0;
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
+@import '@/assets/css/views/site/users.css';
 </style>
