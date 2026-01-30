@@ -21,11 +21,11 @@ func main() {
 	}
 
 	// Параметры подключения к PostgreSQL (используем ваши переменные)
-	dbHost := getEnv("DB_HOST", "localhost")
-	dbPort := getEnv("DB_PORT", "5432")
-	dbUser := getEnv("DB_USER", "postgres")
-	dbPassword := getEnv("DB_PASSWORD", "123123123") // Ваш пароль
-	dbName := getEnv("DB_NAME", "wbrost_go")         // Ваше имя базы
+	dbHost := getEnv("DB_HOST", "")
+	dbPort := getEnv("DB_PORT", "")
+	dbUser := getEnv("DB_USER", "")
+	dbPassword := getEnv("DB_PASSWORD", "")
+	dbName := getEnv("DB_NAME", "")
 
 	// Строка подключения PostgreSQL
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",

@@ -23,7 +23,7 @@ const pageSize = ref(20)
 const totalItems = ref(0)
 const totalPages = ref(0)
 
-const DEFAULT_TIMEOUT = import.meta.env.DEFAULT_TIMEOUT;
+const DEFAULT_TIMEOUT = import.meta.env.VITE_DEFAULT_TIMEOUT;
 
 // Вычисляемое свойство для отображения страниц
 const pagesArray = computed(() => {

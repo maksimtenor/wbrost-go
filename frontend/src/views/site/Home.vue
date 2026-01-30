@@ -219,7 +219,7 @@ import LineChart from '@/components/charts/LineChart.vue'
 import BarChart from '@/components/charts/BarChart.vue'
 import BaseLayout from "@/components/layout/BaseLayout.vue";
 import BasicForm from "@/components/layout/forms/BasicForm.vue";
-const DASHBOARD_AUTO_REFRESH = import.meta.env.DASHBOARD_AUTO_REFRESH;
+const DASHBOARD_AUTO_REFRESH = import.meta.env.VITE_DASHBOARD_AUTO_REFRESH;
 
 export default {
   name: 'Home',
@@ -521,7 +521,7 @@ export default {
           lastUpdated.value = formatTime()
 
           console.log('Дашборд обновлен:', new Date().toLocaleTimeString())
-        }, DASHBOARD_AUTO_REFRESH) // 5 секунд
+        }, parseInt(DASHBOARD_AUTO_REFRESH)) // 5 секунд
       }
     })
 

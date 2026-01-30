@@ -3,7 +3,7 @@ import {ref, computed, onMounted} from 'vue';
 import apiClient from '@/api/client'
 import BaseLayout from "@/components/layout/BaseLayout.vue";
 
-const AUTO_CLEAT_TIMEOUT = import.meta.env.AUTO_CLEAT_TIMEOUT;
+const AUTO_CLEAT_TIMEOUT = import.meta.env.VITE_AUTO_CLEAT_TIMEOUT;
 
 // Реактивные данные формы
 const formData = ref({
@@ -66,7 +66,7 @@ const saveProfile = async () => {
       // Автоочистка сообщения через 3 секунды
       setTimeout(() => {
         message.value = {text: '', type: ''};
-      }, AUTO_CLEAT_TIMEOUT);
+      }, parseInt(AUTO_CLEAT_TIMEOUT));
 
     } else {
       message.value = {

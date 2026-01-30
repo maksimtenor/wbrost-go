@@ -4,7 +4,7 @@ import Sidebar from "../../components/layout/Sidebar.vue";
 import Navbar from "../../components/layout/Navbar.vue";
 import apiClient from '@/api/client'
 import BaseLayout from "@/components/layout/BaseLayout.vue";
-const AUTO_CLEAT_TIMEOUT = import.meta.env.AUTO_CLEAT_TIMEOUT;
+const AUTO_CLEAT_TIMEOUT = import.meta.env.VITE_AUTO_CLEAT_TIMEOUT;
 
 // Данные формы
 const formData = ref({

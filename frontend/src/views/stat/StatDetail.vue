@@ -102,7 +102,7 @@ const handleSubmit = (e) => {
   currentPage.value = 1 // Сбрасываем на первую страницу при новом поиске
   fetchStatDetails()
 }
-const DEFAULT_CURRENCY_TYPE = import.meta.env.DEFAULT_CURRENCY_TYPE;
+const DEFAULT_CURRENCY_TYPE = import.meta.env.VITE_DEFAULT_CURRENCY_TYPE;
 const formatCurrency = (value) => {
   if (value === null || value === undefined || value === '') return DEFAULT_CURRENCY_TYPE+' 0.00'
   const num = typeof value === 'string' ? parseFloat(value) : value
