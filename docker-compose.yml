@@ -73,7 +73,7 @@ services:
       DB_NAME: wbrost_go
       JWT_SECRET: "your-secret-key"
       WORKER_INTERVAL: "60"
-    command: ./worker  # Запускаем воркер вместо основного приложения
+    command: ./stat  # Запускаем воркер вместо основного приложения
     restart: unless-stopped
 
   # Воркер карточек товаров
@@ -92,7 +92,7 @@ services:
       DB_NAME: wbrost_go
       JWT_SECRET: "your-secret-key"
       WORKER_ARTICLES_INTERVAL: "60"
-    command: ./articles_worker
+    command: ./articles
     restart: unless-stopped
 volumes:
   postgres_data:

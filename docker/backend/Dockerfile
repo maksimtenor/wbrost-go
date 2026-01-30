@@ -23,8 +23,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o main ./cmd/api/main.go
 RUN CGO_ENABLED=0 GOOS=linux go build -o migrate ./migrate.go
 
 # Запуск воркеров
-RUN CGO_ENABLED=0 GOOS=linux go build -o worker ./cmd/worker/main.go
-RUN CGO_ENABLED=0 GOOS=linux go build -o articles_worker ./cmd/articles_worker/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -o articles ./cmd/worker/articles.go
+RUN CGO_ENABLED=0 GOOS=linux go build -o stat ./cmd/worker/stat.go
 
 # Production stage
 FROM alpine:latest
@@ -36,8 +36,8 @@ WORKDIR /app
 COPY --from=builder /app/main .
 COPY --from=builder /app/migrate .
 COPY --from=builder /app/migrations ./migrations
-COPY --from=builder /app/worker .
-COPY --from=builder /app/articles_worker .
+COPY --from=builder /app/articles .
+COPY --from=builder /app/stat .
 
 EXPOSE 8080
 
