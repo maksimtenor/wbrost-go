@@ -9,29 +9,37 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"wbrost-go/internal/dto"
 	"wbrost-go/internal/entity"
-	"wbrost-go/internal/repository"
+	"wbrost-go/internal/repository/stat"
+	"wbrost-go/internal/repository/user"
 
 	"github.com/golang-jwt/jwt/v4"
 )
 
 type WBStatsHandler struct {
-	userRepo    *repository.UserRepository
-	wbStatsRepo *repository.WBStatsGetRepository
-	statRepo    *repository.StatRepository
-	jwtSecret   []byte
+	userRepo       *user.UserRepository
+	wbStatsGetRepo *stat.WBStatsGetRepository
+	statRepo       *stat.StatRepository
+	analyticsRepo  *stat.AnalyticsRepository
+	dashboardRepo  *stat.DashboardRepository
+	jwtSecret      []byte
 }
 
 func NewWBStatsHandler(
-	userRepo *repository.UserRepository,
-	wbStatsRepo *repository.WBStatsGetRepository,
-	statRepo *repository.StatRepository,
+	userRepo *user.UserRepository,
+	wbStatsGetRepo *stat.WBStatsGetRepository,
+	statRepo *stat.StatRepository,
+	analyticsRepo *stat.AnalyticsRepository,
+	dashboardRepo *stat.DashboardRepository,
 	jwtSecret string) *WBStatsHandler {
 	return &WBStatsHandler{
-		userRepo:    userRepo,
-		wbStatsRepo: wbStatsRepo,
-		statRepo:    statRepo,
-		jwtSecret:   []byte(jwtSecret),
+		userRepo:       userRepo,
+		wbStatsGetRepo: wbStatsGetRepo,
+		statRepo:       statRepo,
+		analyticsRepo:  analyticsRepo,
+		dashboardRepo:  dashboardRepo,
+		jwtSecret:      []byte(jwtSecret),
 	}
 }
 
@@ -40,7 +48,7 @@ func (h *WBStatsHandler) GetStatDetail(w http.ResponseWriter, r *http.Request) {
 	// Получить пользователя по токену
 	user, err := h.getUserFromRequest(r)
 	if err != nil {
-		respondWithJSON(w, http.StatusUnauthorized, entity.ErrorResponse{Error: "Unauthorized"})
+		respondWithJSON(w, http.StatusUnauthorized, dto.ErrorResponse{Error: "Unauthorized"})
 		return
 	}
 
@@ -52,7 +60,7 @@ func (h *WBStatsHandler) GetStatDetail(w http.ResponseWriter, r *http.Request) {
 
 	//Валидация дат(если не указаны, можно использовать значения по умолчанию или вернуть ошибку)
 	if dateFrom == "" || dateTo == "" {
-		respondWithJSON(w, http.StatusBadRequest, entity.ErrorResponse{
+		respondWithJSON(w, http.StatusBadRequest, dto.ErrorResponse{
 			Error: "Parameters dateFrom and dateTo are required",
 		})
 		return
@@ -60,14 +68,14 @@ func (h *WBStatsHandler) GetStatDetail(w http.ResponseWriter, r *http.Request) {
 
 	// Проверяем формат дат (опционально)
 	if _, err := time.Parse("2006-01-02", dateFrom); err != nil {
-		respondWithJSON(w, http.StatusBadRequest, entity.ErrorResponse{
+		respondWithJSON(w, http.StatusBadRequest, dto.ErrorResponse{
 			Error: "Invalid dateFrom format, expected YYYY-MM-DD",
 		})
 		return
 	}
 
 	if _, err := time.Parse("2006-01-02", dateTo); err != nil {
-		respondWithJSON(w, http.StatusBadRequest, entity.ErrorResponse{
+		respondWithJSON(w, http.StatusBadRequest, dto.ErrorResponse{
 			Error: "Invalid dateTo format, expected YYYY-MM-DD",
 		})
 		return
@@ -89,27 +97,27 @@ func (h *WBStatsHandler) GetStatDetail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Получить детальные данные статистики
-	statDetails, err := h.statRepo.GetStatDetails(user.ID, dateFrom, dateTo, page, pageSize)
+	statDetails, err := h.analyticsRepo.GetStatDetails(user.ID, dateFrom, dateTo, page, pageSize)
 	if err != nil {
-		respondWithJSON(w, http.StatusInternalServerError, entity.ErrorResponse{
+		respondWithJSON(w, http.StatusInternalServerError, dto.ErrorResponse{
 			Error: "Failed to get stat details: " + err.Error(),
 		})
 		return
 	}
 
 	// Получить общее количество записей для пагинации
-	totalCount, err := h.statRepo.GetStatDetailsCount(user.ID, dateFrom, dateTo)
+	totalCount, err := h.analyticsRepo.GetStatDetailsCount(user.ID, dateFrom, dateTo)
 	if err != nil {
-		respondWithJSON(w, http.StatusInternalServerError, entity.ErrorResponse{
+		respondWithJSON(w, http.StatusInternalServerError, dto.ErrorResponse{
 			Error: "Failed to get total count: " + err.Error(),
 		})
 		return
 	}
 
 	// Получить итоговые суммы
-	summaryStatDetails, err := h.statRepo.GetStatSummary(user.ID, dateFrom, dateTo)
+	summaryStatDetails, err := h.analyticsRepo.GetStatSummary(user.ID, dateFrom, dateTo)
 	if err != nil {
-		respondWithJSON(w, http.StatusInternalServerError, entity.ErrorResponse{
+		respondWithJSON(w, http.StatusInternalServerError, dto.ErrorResponse{
 			Error: "Failed to get stat summary: " + err.Error(),
 		})
 		return
@@ -137,14 +145,14 @@ func (h *WBStatsHandler) GetWBReports(w http.ResponseWriter, r *http.Request) {
 	// Получить пользователя по токену
 	user, err := h.getUserFromRequest(r)
 	if err != nil {
-		respondWithJSON(w, http.StatusUnauthorized, entity.ErrorResponse{Error: "Unauthorized"})
+		respondWithJSON(w, http.StatusUnauthorized, dto.ErrorResponse{Error: "Unauthorized"})
 		return
 	}
 
 	// Получить отчеты для этого пользователя
-	reports, err := h.wbStatsRepo.GetByUserID(user.ID)
+	reports, err := h.wbStatsGetRepo.GetByUserID(user.ID)
 	if err != nil {
-		respondWithJSON(w, http.StatusInternalServerError, entity.ErrorResponse{Error: "Failed to get reports"})
+		respondWithJSON(w, http.StatusInternalServerError, dto.ErrorResponse{Error: "Failed to get reports"})
 		return
 	}
 
@@ -171,7 +179,7 @@ func (h *WBStatsHandler) CreateWBReport(w http.ResponseWriter, r *http.Request) 
 	// Get user from token
 	user, err := h.getUserFromRequest(r)
 	if err != nil {
-		respondWithJSON(w, http.StatusUnauthorized, entity.ErrorResponse{Error: "Unauthorized"})
+		respondWithJSON(w, http.StatusUnauthorized, dto.ErrorResponse{Error: "Unauthorized"})
 		return
 	}
 
@@ -182,13 +190,13 @@ func (h *WBStatsHandler) CreateWBReport(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondWithJSON(w, http.StatusBadRequest, entity.ErrorResponse{Error: "Invalid request body"})
+		respondWithJSON(w, http.StatusBadRequest, dto.ErrorResponse{Error: "Invalid request body"})
 		return
 	}
 
 	// Валидация данных
 	if req.DateFrom == "" || req.DateTo == "" {
-		respondWithJSON(w, http.StatusBadRequest, entity.ErrorResponse{Error: "DateFrom and DateTo are required"})
+		respondWithJSON(w, http.StatusBadRequest, dto.ErrorResponse{Error: "DateFrom and DateTo are required"})
 		return
 	}
 
@@ -200,8 +208,8 @@ func (h *WBStatsHandler) CreateWBReport(w http.ResponseWriter, r *http.Request) 
 		DateTo:   req.DateTo,
 	}
 
-	if err := h.wbStatsRepo.Create(stats); err != nil {
-		respondWithJSON(w, http.StatusInternalServerError, entity.ErrorResponse{Error: "Failed to create report: " + err.Error()})
+	if err := h.wbStatsGetRepo.Create(stats); err != nil {
+		respondWithJSON(w, http.StatusInternalServerError, dto.ErrorResponse{Error: "Failed to create report: " + err.Error()})
 		return
 	}
 
@@ -217,14 +225,14 @@ func (h *WBStatsHandler) CreateWBReport(w http.ResponseWriter, r *http.Request) 
 }
 
 // Асинхронная функция для получения данных из WB.
-func (h *WBStatsHandler) fetchWBDataAsync(reportID int, user *repository.User, dateFrom, dateTo string) {
+func (h *WBStatsHandler) fetchWBDataAsync(reportID int, user *user.User, dateFrom, dateTo string) {
 	// Здесь следует реализовать фактический вызов API WB
 	// Пока что, имитируем обработку
 
 	time.Sleep(2 * time.Second) // Имитировать вызов API
 
 	// Обновление статуса на "успех"
-	h.wbStatsRepo.UpdateStatus(reportID, 1, "")
+	h.wbStatsGetRepo.UpdateStatus(reportID, 1, "")
 
 	fmt.Printf("Report %d processed successfully for user %d\n", reportID, user.ID)
 }
@@ -234,7 +242,7 @@ func (h *WBStatsHandler) GetDashboardStats(w http.ResponseWriter, r *http.Reques
 	// Получить пользователя по токену
 	user, err := h.getUserFromRequest(r)
 	if err != nil {
-		respondWithJSON(w, http.StatusUnauthorized, entity.ErrorResponse{Error: "Unauthorized"})
+		respondWithJSON(w, http.StatusUnauthorized, dto.ErrorResponse{Error: "Unauthorized"})
 		return
 	}
 
@@ -254,27 +262,27 @@ func (h *WBStatsHandler) GetDashboardStats(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Получить статистику для дашборда
-	stats, err := h.statRepo.GetDashboardStats(user.ID, dateFrom, dateTo)
+	stats, err := h.dashboardRepo.GetDashboardStats(user.ID, dateFrom, dateTo)
 	if err != nil {
-		respondWithJSON(w, http.StatusInternalServerError, entity.ErrorResponse{
+		respondWithJSON(w, http.StatusInternalServerError, dto.ErrorResponse{
 			Error: "Failed to get dashboard stats: " + err.Error(),
 		})
 		return
 	}
 
 	// Получить данные для графиков
-	chartData, err := h.statRepo.GetChartData(user.ID, dateFrom, dateTo)
+	chartData, err := h.dashboardRepo.GetChartData(user.ID, dateFrom, dateTo)
 	if err != nil {
-		respondWithJSON(w, http.StatusInternalServerError, entity.ErrorResponse{
+		respondWithJSON(w, http.StatusInternalServerError, dto.ErrorResponse{
 			Error: "Failed to get chart data: " + err.Error(),
 		})
 		return
 	}
 
 	// Получить данные по месяцам
-	monthlyRevenue, err := h.statRepo.GetMonthlyRevenue(user.ID)
+	monthlyRevenue, err := h.dashboardRepo.GetMonthlyRevenue(user.ID)
 	if err != nil {
-		respondWithJSON(w, http.StatusInternalServerError, entity.ErrorResponse{
+		respondWithJSON(w, http.StatusInternalServerError, dto.ErrorResponse{
 			Error: "Failed to get monthly revenue: " + err.Error(),
 		})
 		return
@@ -295,7 +303,7 @@ func (h *WBStatsHandler) GetDashboardStats(w http.ResponseWriter, r *http.Reques
 }
 
 // Вспомогательная функция для получения пользователя из JWT-токена.
-func (h *WBStatsHandler) getUserFromRequest(r *http.Request) (*repository.User, error) {
+func (h *WBStatsHandler) getUserFromRequest(r *http.Request) (*user.User, error) {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
 		return nil, fmt.Errorf("no authorization header")

@@ -1,5 +1,5 @@
--- Таблица stat из m250603_214156_create_stat_table
-CREATE TABLE IF NOT EXISTS stat (
+-- Таблица wb_stats из m250603_214156_create_wb_stats_table
+CREATE TABLE IF NOT EXISTS wb_stats (
                                     id SERIAL PRIMARY KEY,
                                     hash_info VARCHAR(2000),
     user_id INT NOT NULL,
@@ -52,14 +52,14 @@ CREATE TABLE IF NOT EXISTS stat (
     rid BIGINT
     );
 
-CREATE INDEX idx_stat_user_id ON stat(user_id);
-CREATE INDEX idx_stat_nm_id ON stat(nm_id);
-CREATE INDEX idx_stat_ppvz_for_pay ON stat(ppvz_for_pay);
-CREATE INDEX idx_stat_quantity ON stat(quantity);
-CREATE INDEX idx_stat_realizationreport_id ON stat(realizationreport_id);
-CREATE INDEX idx_stat_rebill_logistic_cost ON stat(rebill_logistic_cost);
-CREATE INDEX idx_stat_report_type ON stat(report_type);
-CREATE INDEX idx_stat_return_amount ON stat(return_amount);
-CREATE INDEX idx_stat_rid ON stat(rid);
-CREATE INDEX idx_stat_supplier_oper_name ON stat(supplier_oper_name);
-CREATE INDEX idx_stat_rr_dt ON stat(rr_dt);
+CREATE INDEX idx_wb_stats_user_id ON wb_stats(user_id);
+CREATE INDEX idx_wb_stats_nm_id ON wb_stats(nm_id);
+CREATE INDEX idx_wb_stats_ppvz_for_pay ON wb_stats(ppvz_for_pay);
+CREATE INDEX idx_wb_stats_quantity ON wb_stats(quantity);
+CREATE INDEX idx_wb_stats_realizationreport_id ON wb_stats(realizationreport_id);
+CREATE INDEX idx_wb_stats_rebill_logistic_cost ON wb_stats(rebill_logistic_cost);
+CREATE INDEX idx_wb_stats_report_type ON wb_stats(report_type);
+CREATE INDEX idx_wb_stats_return_amount ON wb_stats(return_amount);
+CREATE INDEX idx_wb_stats_rid ON wb_stats(rid);
+CREATE INDEX idx_wb_stats_supplier_oper_name ON wb_stats(supplier_oper_name);
+CREATE INDEX idx_wb_stats_rr_dt ON wb_stats(rr_dt);

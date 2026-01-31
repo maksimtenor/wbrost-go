@@ -1,16 +1,17 @@
-package repository
+package article
 
 import (
 	"fmt"
 	"time"
 	"wbrost-go/internal/entity"
+	"wbrost-go/internal/repository/database/postgres"
 )
 
 type WBArticlesGetRepository struct {
-	db *PostgresDB
+	db *postgres.PostgresDB
 }
 
-func NewWBArticlesGetRepository(db *PostgresDB) *WBArticlesGetRepository {
+func NewWBArticlesGetRepository(db *postgres.PostgresDB) *WBArticlesGetRepository {
 	return &WBArticlesGetRepository{db: db}
 }
 

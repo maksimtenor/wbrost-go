@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-type User struct {
+type Users struct {
 	ID              int            `json:"id" db:"id_user"`
 	Taxes           int            `json:"taxes" db:"taxes"`
 	Username        string         `json:"username" db:"username"`

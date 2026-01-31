@@ -9,8 +9,11 @@ import (
 	"syscall"
 	"time"
 	"wbrost-go/internal/config"
-	"wbrost-go/internal/repository"
-	"wbrost-go/internal/service"
+	"wbrost-go/internal/repository/article"
+	"wbrost-go/internal/repository/database/postgres"
+	"wbrost-go/internal/repository/stat"
+	"wbrost-go/internal/repository/user"
+	"wbrost-go/internal/service/wb"
 )
 
 func main() {
@@ -31,7 +34,7 @@ func main() {
 		// Здесь можно добавить дополнительную логику для медленного режима
 	}
 	// Инициализируем БД
-	db, err := repository.NewPostgresDB(cfg.GetDBConnectionString())
+	db, err := postgres.NewPostgresDB(cfg.GetDBConnectionString())
 	if err != nil {
 		log.Fatalf("Ошибка подключения к БД: %v", err)
 	}
@@ -40,14 +43,14 @@ func main() {
 	fmt.Println("✓ Подключение к БД установлено")
 
 	// Инициализируем репозитории
-	userRepo := repository.NewUserRepository(db)
-	statsGetRepo := repository.NewWBStatsGetRepository(db)
-	statRepo := repository.NewStatRepository(db, userRepo)
-	articlesGetRepo := repository.NewWBArticlesGetRepository(db)
-	articleRepo := repository.NewWBArticleRepository(db)
+	userRepo := user.NewUserRepository(db)
+	statsGetRepo := stat.NewWBStatsGetRepository(db)
+	statRepo := stat.NewStatRepository(db)
+	articlesGetRepo := article.NewWBArticlesGetRepository(db)
+	articleRepo := article.NewWBArticlesRepository(db)
 
 	// Инициализируем сервис
-	wbService := service.NewWBService(userRepo, statsGetRepo, statRepo, articlesGetRepo, articleRepo)
+	wbService := wb.NewWBService(userRepo, statsGetRepo, statRepo, articlesGetRepo, articleRepo)
 
 	// Определяем интервал
 	if interval == 0 {

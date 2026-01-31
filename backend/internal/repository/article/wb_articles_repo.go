@@ -1,22 +1,23 @@
-package repository
+package article
 
 import (
 	"fmt"
 	"strings"
 	"time"
 	"wbrost-go/internal/entity"
+	"wbrost-go/internal/repository/database/postgres"
 )
 
-type WBArticleRepository struct {
-	db *PostgresDB
+type WBArticlesRepository struct {
+	db *postgres.PostgresDB
 }
 
-func NewWBArticleRepository(db *PostgresDB) *WBArticleRepository {
-	return &WBArticleRepository{db: db}
+func NewWBArticlesRepository(db *postgres.PostgresDB) *WBArticlesRepository {
+	return &WBArticlesRepository{db: db}
 }
 
 // CreateOrUpdate создает или обновляет карточку товара
-func (r *WBArticleRepository) CreateOrUpdate(article *entity.WBArticleDB) error {
+func (r *WBArticlesRepository) CreateOrUpdate(article *entity.WBArticles) error {
 	// Проверяем существование
 	var exists bool
 	err := r.db.QueryRow(
@@ -83,7 +84,7 @@ func (r *WBArticleRepository) CreateOrUpdate(article *entity.WBArticleDB) error 
 }
 
 // GetByUserID получает карточки товаров пользователя
-func (r *WBArticleRepository) GetByUserID(userID int, page, pageSize int) ([]entity.WBArticleDB, error) {
+func (r *WBArticlesRepository) GetByUserID(userID int, page, pageSize int) ([]entity.WBArticles, error) {
 	offset := (page - 1) * pageSize
 
 	query := `
@@ -102,9 +103,9 @@ func (r *WBArticleRepository) GetByUserID(userID int, page, pageSize int) ([]ent
 	}
 	defer rows.Close()
 
-	var articles []entity.WBArticleDB
+	var articles []entity.WBArticles
 	for rows.Next() {
-		var a entity.WBArticleDB
+		var a entity.WBArticles
 		err := rows.Scan(
 			&a.ID,
 			&a.UserID,
@@ -131,7 +132,7 @@ func (r *WBArticleRepository) GetByUserID(userID int, page, pageSize int) ([]ent
 }
 
 // GetCountByUserID получает общее количество карточек пользователя
-func (r *WBArticleRepository) GetCountByUserID(userID int) (int, error) {
+func (r *WBArticlesRepository) GetCountByUserID(userID int) (int, error) {
 	var count int
 	err := r.db.QueryRow(
 		"SELECT COUNT(*) FROM wb_articles WHERE id_user = $1",
@@ -142,7 +143,7 @@ func (r *WBArticleRepository) GetCountByUserID(userID int) (int, error) {
 }
 
 // UpdateCostPrice обновляет себестоимость товара
-func (r *WBArticleRepository) UpdateCostPrice(userID int, articule, costPrice string) error {
+func (r *WBArticlesRepository) UpdateCostPrice(userID int, articule, costPrice string) error {
 	query := `
 		UPDATE wb_articles 
 		SET cost_price = $1, updated = $2, updated_at = $3
@@ -154,7 +155,7 @@ func (r *WBArticleRepository) UpdateCostPrice(userID int, articule, costPrice st
 }
 
 // SearchArticles поиск карточек по названию или артикулу
-func (r *WBArticleRepository) SearchArticles(userID int, search string, page, pageSize int) ([]entity.WBArticleDB, error) {
+func (r *WBArticlesRepository) SearchArticles(userID int, search string, page, pageSize int) ([]entity.WBArticles, error) {
 	offset := (page - 1) * pageSize
 	searchPattern := "%" + strings.ToLower(search) + "%"
 
@@ -175,9 +176,9 @@ func (r *WBArticleRepository) SearchArticles(userID int, search string, page, pa
 	}
 	defer rows.Close()
 
-	var articles []entity.WBArticleDB
+	var articles []entity.WBArticles
 	for rows.Next() {
-		var a entity.WBArticleDB
+		var a entity.WBArticles
 		err := rows.Scan(
 			&a.ID,
 			&a.UserID,

@@ -17,7 +17,7 @@ COPY backend/ ./
 # ДОБАВЛЕН ПРЕФИКС backend/
 
 # Собираем приложение
-RUN CGO_ENABLED=0 GOOS=linux go build -o main ./cmd/api/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -o main ./cmd/app/main.go
 
 # Собираем миграции
 RUN CGO_ENABLED=0 GOOS=linux go build -o migrate ./migrate.go

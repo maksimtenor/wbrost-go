@@ -1,16 +1,17 @@
-package repository
+package stat
 
 import (
 	"fmt"
 	"time"
 	"wbrost-go/internal/entity"
+	"wbrost-go/internal/repository/database/postgres"
 )
 
 type WBStatsGetRepository struct {
-	db *PostgresDB
+	db *postgres.PostgresDB
 }
 
-func NewWBStatsGetRepository(db *PostgresDB) *WBStatsGetRepository {
+func NewWBStatsGetRepository(db *postgres.PostgresDB) *WBStatsGetRepository {
 	return &WBStatsGetRepository{db: db}
 }
 

@@ -92,8 +92,5 @@ func SetupRoutes(
 		}
 	})
 
-	// Apply CORS middleware
-	//handler := middleware.CORS(mux)
-
 	return mux
 }

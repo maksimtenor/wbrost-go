@@ -1,10 +1,10 @@
-package service
+package auth
 
 import (
 	"database/sql"
 	"time"
 	"wbrost-go/internal/entity"
-	"wbrost-go/internal/repository"
+	"wbrost-go/internal/repository/user"
 )
 
 type CreateUserDTO struct {
@@ -12,36 +12,36 @@ type CreateUserDTO struct {
 	Username     string
 	Email        string
 	PasswordHash string
-	Pro          int // Изменено с ProAccount string на Pro int
+	Pro          int
 	Admin        int
 }
 
 type AuthService struct {
-	userRepo *repository.UserRepository
+	userRepo *user.UserRepository
 }
 
-func NewAuthService(userRepo *repository.UserRepository) *AuthService {
+func NewAuthService(userRepo *user.UserRepository) *AuthService {
 	return &AuthService{userRepo: userRepo}
 }
 
-func (s *AuthService) GetUserByUsername(username string) (*repository.User, error) {
+func (s *AuthService) GetUserByUsername(username string) (*user.User, error) {
 	return s.userRepo.GetByUsername(username)
 }
 
-func (s *AuthService) GetUserByUserId(userId int) (*repository.User, error) {
+func (s *AuthService) GetUserByUserId(userId int) (*user.User, error) {
 	return s.userRepo.GetByUserId(userId)
 }
 
-func (s *AuthService) GetAllUsers(page, pageSize int) ([]entity.User, error) {
+func (s *AuthService) GetAllUsers(page, pageSize int) ([]entity.Users, error) {
 	return s.userRepo.GetAll(page, pageSize)
 }
 
-func (s *AuthService) CreateUser(dto CreateUserDTO) (*repository.User, error) {
-	user := &repository.User{
+func (s *AuthService) CreateUser(dto CreateUserDTO) (*user.User, error) {
+	user := &user.User{
 		Username:        dto.Username,
 		PasswordHash:    dto.PasswordHash,
-		Email:           sql.NullString{String: dto.Email, Valid: true}, // Valid: true!
-		Name:            sql.NullString{String: dto.Name, Valid: true},  // Valid: true!
+		Email:           sql.NullString{String: dto.Email, Valid: true},
+		Name:            sql.NullString{String: dto.Name, Valid: true},
 		Pro:             dto.Pro,
 		Admin:           dto.Admin,
 		Taxes:           0,

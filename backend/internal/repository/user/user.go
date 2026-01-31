@@ -1,10 +1,11 @@
-package repository
+package user
 
 import (
 	"database/sql"
 	"fmt"
 	"time"
 	"wbrost-go/internal/entity"
+	"wbrost-go/internal/repository/database/postgres"
 )
 
 // User - модель для работы с таблицей users
@@ -30,10 +31,10 @@ type User struct {
 }
 
 type UserRepository struct {
-	db *PostgresDB
+	db *postgres.PostgresDB
 }
 
-func NewUserRepository(db *PostgresDB) *UserRepository {
+func NewUserRepository(db *postgres.PostgresDB) *UserRepository {
 	return &UserRepository{db: db}
 }
 func (r *UserRepository) GetCountAllUsers() (int, error) {
@@ -44,7 +45,7 @@ func (r *UserRepository) GetCountAllUsers() (int, error) {
 
 	return count, err
 }
-func (r *UserRepository) GetAll(page, pageSize int) ([]entity.User, error) {
+func (r *UserRepository) GetAll(page, pageSize int) ([]entity.Users, error) {
 	offset := (page - 1) * pageSize
 	query := `SELECT 
         id_user, taxes, username, password, email, admin, block, pro, 
@@ -59,9 +60,9 @@ LIMIT $1 OFFSET $2`
 		return nil, err
 	}
 	defer rows.Close()
-	var users []entity.User
+	var users []entity.Users
 	for rows.Next() {
-		var a entity.User
+		var a entity.Users
 		err := rows.Scan(
 			&a.ID,
 			&a.Taxes,

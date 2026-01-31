@@ -37,9 +37,9 @@ func Load() *Config {
 	}
 
 	// Если в окружении заданы доп origins
-	if extraOrigins := os.Getenv("ALLOWED_ORIGINS"); extraOrigins != "" {
-		allowedOrigins = append(allowedOrigins, extraOrigins)
-	}
+	//if extraOrigins := os.Getenv("ALLOWED_ORIGINS"); extraOrigins != "" {
+	//	allowedOrigins = append(allowedOrigins, extraOrigins)
+	//}
 
 	return &Config{
 		DBHost:         getEnv("DB_HOST", "localhost"),
@@ -57,7 +57,7 @@ func Load() *Config {
 	}
 }
 
-// GetDBConnectionString возвращает строку подключения к PostgreSQL
+// GetDBConnectionString - строка подключения к бд (постгря)
 func (c *Config) GetDBConnectionString() string {
 	return fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		c.DBHost, c.DBPort, c.DBUser, c.DBPassword, c.DBName)

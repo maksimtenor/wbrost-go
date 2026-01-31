@@ -6,9 +6,12 @@ import (
 	"wbrost-go/internal/config"
 	"wbrost-go/internal/handler"
 	"wbrost-go/internal/middleware"
-	"wbrost-go/internal/repository"
+	"wbrost-go/internal/repository/article"
+	"wbrost-go/internal/repository/database/postgres"
+	"wbrost-go/internal/repository/stat"
+	"wbrost-go/internal/repository/user"
 	"wbrost-go/internal/server"
-	"wbrost-go/internal/service"
+	"wbrost-go/internal/service/auth"
 )
 
 func main() {
@@ -29,25 +32,27 @@ func main() {
 		" sslmode=disable"
 
 	// Инициализируем БД
-	db, err := repository.NewPostgresDB(connectionString)
+	db, err := postgres.NewPostgresDB(connectionString)
 	if err != nil {
 		log.Fatal("Failed to connect to database:", err)
 	}
 	defer db.Close()
 
 	// Инициализируем репозитории
-	userRepo := repository.NewUserRepository(db)
-	wbStatsGetRepo := repository.NewWBStatsGetRepository(db)
-	statsRepo := repository.NewStatRepository(db, userRepo)
-	articlesGetRepo := repository.NewWBArticlesGetRepository(db)
-	articleRepo := repository.NewWBArticleRepository(db)
+	userRepo := user.NewUserRepository(db)
+	wbStatsGetRepo := stat.NewWBStatsGetRepository(db)
+	statsRepo := stat.NewStatRepository(db)
+	analyticsRepo := stat.NewAnalyticsRepository(db, userRepo)
+	dashboardRepo := stat.NewDashboardRepository(db, userRepo)
+	articlesGetRepo := article.NewWBArticlesGetRepository(db)
+	articleRepo := article.NewWBArticlesRepository(db)
 
 	// Инициализируем сервис
-	authService := service.NewAuthService(userRepo)
+	authService := auth.NewAuthService(userRepo)
 
 	// Создаем обработчики
 	authHandler := handler.NewAuthHandler(authService, userRepo, cfg.JWTSecret)
-	wbStatsHandler := handler.NewWBStatsHandler(userRepo, wbStatsGetRepo, statsRepo, cfg.JWTSecret)
+	wbStatsHandler := handler.NewWBStatsHandler(userRepo, wbStatsGetRepo, statsRepo, analyticsRepo, dashboardRepo, cfg.JWTSecret)
 	wbArticlesHandler := handler.NewWBArticlesHandler(userRepo, articlesGetRepo, articleRepo, cfg.JWTSecret)
 
 	// Настраиваем маршруты

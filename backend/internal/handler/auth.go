@@ -8,22 +8,23 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"wbrost-go/internal/api/wb"
+	dto2 "wbrost-go/internal/dto"
 	"wbrost-go/internal/entity"
-	"wbrost-go/internal/repository"
-	"wbrost-go/internal/service"
-	"wbrost-go/internal/wbapi"
+	"wbrost-go/internal/repository/user"
+	"wbrost-go/internal/service/auth"
 
 	"github.com/golang-jwt/jwt/v4"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthHandler struct {
-	authService *service.AuthService
-	userRepo    *repository.UserRepository
+	authService *auth.AuthService
+	userRepo    *user.UserRepository
 	jwtSecret   []byte
 }
 
-func NewAuthHandler(authService *service.AuthService, userRepo *repository.UserRepository, jwtSecret string) *AuthHandler {
+func NewAuthHandler(authService *auth.AuthService, userRepo *user.UserRepository, jwtSecret string) *AuthHandler {
 	return &AuthHandler{
 		authService: authService,
 		userRepo:    userRepo,
@@ -35,11 +36,11 @@ func (h *AuthHandler) GetUsersList(w http.ResponseWriter, r *http.Request) {
 	// Получить пользователя по токену
 	userCheck, err := h.getUserFromRequest(r)
 	if err != nil {
-		respondWithJSON(w, http.StatusUnauthorized, entity.ErrorResponse{Error: "Unauthorized"})
+		respondWithJSON(w, http.StatusUnauthorized, dto2.ErrorResponse{Error: "Unauthorized"})
 		return
 	}
 	if userCheck.Admin < 1 {
-		respondWithJSON(w, http.StatusForbidden, entity.ErrorResponse{Error: "Вам сюда нельзя!"})
+		respondWithJSON(w, http.StatusForbidden, dto2.ErrorResponse{Error: "Вам сюда нельзя!"})
 		return
 	}
 	// Параметры запроса
@@ -60,13 +61,13 @@ func (h *AuthHandler) GetUsersList(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var users []entity.User
+	var users []entity.Users
 	var totalCount int
 
 	// Получение всех пользователей с пагинацией
 	users, err = h.userRepo.GetAll(page, pageSize)
 	if err != nil {
-		respondWithJSON(w, http.StatusInternalServerError, entity.ErrorResponse{
+		respondWithJSON(w, http.StatusInternalServerError, dto2.ErrorResponse{
 			Error: "Failed to get articles: " + err.Error(),
 		})
 		return
@@ -75,7 +76,7 @@ func (h *AuthHandler) GetUsersList(w http.ResponseWriter, r *http.Request) {
 	// Получить общее количество
 	totalCount, err = h.userRepo.GetCountAllUsers()
 	if err != nil {
-		respondWithJSON(w, http.StatusInternalServerError, entity.ErrorResponse{
+		respondWithJSON(w, http.StatusInternalServerError, dto2.ErrorResponse{
 			Error: "Failed to get total count: " + err.Error(),
 		})
 		return
@@ -135,15 +136,15 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req entity.LoginRequest
+	var req dto2.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondWithJSON(w, http.StatusBadRequest, entity.ErrorResponse{Error: "Invalid request body"})
+		respondWithJSON(w, http.StatusBadRequest, dto2.ErrorResponse{Error: "Invalid request body"})
 		return
 	}
 
 	// Валидация
 	if req.Username == "" || req.Password == "" {
-		respondWithJSON(w, http.StatusBadRequest, entity.ErrorResponse{Error: "Username and password are required"})
+		respondWithJSON(w, http.StatusBadRequest, dto2.ErrorResponse{Error: "Username and password are required"})
 		return
 	}
 
@@ -151,13 +152,13 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	user, err := h.authService.GetUserByUsername(req.Username)
 	if err != nil {
 		// Возвращаем 400 вместо 401 для лучшей совместимости
-		respondWithJSON(w, http.StatusBadRequest, entity.ErrorResponse{Error: "Invalid username or password"})
+		respondWithJSON(w, http.StatusBadRequest, dto2.ErrorResponse{Error: "Invalid username or password"})
 		return
 	}
 
 	// Проверяем пароль
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
-		respondWithJSON(w, http.StatusBadRequest, entity.ErrorResponse{Error: "Invalid username or password"})
+		respondWithJSON(w, http.StatusBadRequest, dto2.ErrorResponse{Error: "Invalid username or password"})
 		return
 	}
 
@@ -175,9 +176,9 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Формируем ответ
-	response := entity.LoginResponse{
+	response := dto2.LoginResponse{
 		Token: tokenString,
-		User: entity.UserResponse{
+		User: dto2.UserResponse{
 			ID:        user.ID,
 			Name:      getStringPtrFromNullString(user.Name),
 			Username:  user.Username,
@@ -202,7 +203,7 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req entity.SignupRequest
+	var req dto2.SignupRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
@@ -226,7 +227,7 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 	if len(validationErrors) > 0 {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(entity.ValidationErrors{Errors: validationErrors})
+		json.NewEncoder(w).Encode(dto2.ValidationErrors{Errors: validationErrors})
 		return
 	}
 
@@ -238,7 +239,7 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Создаем пользователя - исправляем поле Pro
-	user, err := h.authService.CreateUser(service.CreateUserDTO{
+	user, err := h.authService.CreateUser(auth.CreateUserDTO{
 		Name:         req.Name,
 		Username:     req.Username,
 		Email:        req.Email,
@@ -261,7 +262,7 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 		if len(validationErrors) > 0 {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(entity.ValidationErrors{Errors: validationErrors})
+			json.NewEncoder(w).Encode(dto2.ValidationErrors{Errors: validationErrors})
 			return
 		}
 	}
@@ -279,9 +280,9 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response := entity.LoginResponse{
+	response := dto2.LoginResponse{
 		Token: tokenString,
-		User: entity.UserResponse{
+		User: dto2.UserResponse{
 			ID:        user.ID,
 			Name:      getStringPtrFromNullString(user.Name),
 			Username:  user.Username,
@@ -303,7 +304,7 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 func respondWithError(w http.ResponseWriter, code int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
-	json.NewEncoder(w).Encode(entity.ErrorResponse{Error: message})
+	json.NewEncoder(w).Encode(dto2.ErrorResponse{Error: message})
 }
 
 // Helper функция для конвертации sql.NullString в string
@@ -320,7 +321,7 @@ func (h *AuthHandler) GetCurrentUser(w http.ResponseWriter, r *http.Request) {
 	// Извлекаем токен из заголовка
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
-		respondWithJSON(w, http.StatusUnauthorized, entity.ErrorResponse{Error: "No authorization header"})
+		respondWithJSON(w, http.StatusUnauthorized, dto2.ErrorResponse{Error: "No authorization header"})
 		return
 	}
 
@@ -333,32 +334,32 @@ func (h *AuthHandler) GetCurrentUser(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil || !token.Valid {
-		respondWithJSON(w, http.StatusUnauthorized, entity.ErrorResponse{Error: "Invalid token"})
+		respondWithJSON(w, http.StatusUnauthorized, dto2.ErrorResponse{Error: "Invalid token"})
 		return
 	}
 
 	// Извлекаем данные из токена
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		respondWithJSON(w, http.StatusUnauthorized, entity.ErrorResponse{Error: "Invalid token claims"})
+		respondWithJSON(w, http.StatusUnauthorized, dto2.ErrorResponse{Error: "Invalid token claims"})
 		return
 	}
 
 	username, ok := claims["username"].(string)
 	if !ok {
-		respondWithJSON(w, http.StatusUnauthorized, entity.ErrorResponse{Error: "Invalid username in token"})
+		respondWithJSON(w, http.StatusUnauthorized, dto2.ErrorResponse{Error: "Invalid username in token"})
 		return
 	}
 
 	// Получаем ПОСЛЕДНИЕ данные из БД
 	user, err := h.authService.GetUserByUsername(username)
 	if err != nil {
-		respondWithJSON(w, http.StatusNotFound, entity.ErrorResponse{Error: "User not found"})
+		respondWithJSON(w, http.StatusNotFound, dto2.ErrorResponse{Error: "User not found"})
 		return
 	}
 
 	// Формируем ответ с текущими данными
-	response := entity.UserResponse{
+	response := dto2.UserResponse{
 		ID:        user.ID,
 		Name:      getStringPtrFromNullString(user.Name),
 		Username:  user.Username,
@@ -380,7 +381,7 @@ func (h *AuthHandler) GetApiKeysStatus(w http.ResponseWriter, r *http.Request) {
 	// 1. Получаем токен из заголовка
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
-		respondWithJSON(w, http.StatusUnauthorized, entity.ErrorResponse{Error: "No authorization header"})
+		respondWithJSON(w, http.StatusUnauthorized, dto2.ErrorResponse{Error: "No authorization header"})
 		return
 	}
 
@@ -391,27 +392,27 @@ func (h *AuthHandler) GetApiKeysStatus(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil || !token.Valid {
-		respondWithJSON(w, http.StatusUnauthorized, entity.ErrorResponse{Error: "Invalid token"})
+		respondWithJSON(w, http.StatusUnauthorized, dto2.ErrorResponse{Error: "Invalid token"})
 		return
 	}
 
 	// 3. Извлекаем username из токена
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		respondWithJSON(w, http.StatusUnauthorized, entity.ErrorResponse{Error: "Invalid token claims"})
+		respondWithJSON(w, http.StatusUnauthorized, dto2.ErrorResponse{Error: "Invalid token claims"})
 		return
 	}
 
 	username, ok := claims["username"].(string)
 	if !ok {
-		respondWithJSON(w, http.StatusUnauthorized, entity.ErrorResponse{Error: "Invalid username in token"})
+		respondWithJSON(w, http.StatusUnauthorized, dto2.ErrorResponse{Error: "Invalid username in token"})
 		return
 	}
 
 	// 4. Получаем пользователя через authService (не userRepo!)
 	user, err := h.authService.GetUserByUsername(username)
 	if err != nil {
-		respondWithJSON(w, http.StatusNotFound, entity.ErrorResponse{Error: "User not found"})
+		respondWithJSON(w, http.StatusNotFound, dto2.ErrorResponse{Error: "User not found"})
 		return
 	}
 
@@ -424,7 +425,7 @@ func (h *AuthHandler) GetApiKeysStatus(w http.ResponseWriter, r *http.Request) {
 
 	if user.WbKey.Valid && user.WbKey.String != "" {
 		// СОЗДАЕМ WB КЛИЕНТ И ПРОВЕРЯЕМ ТОКЕН
-		wbClient := wbapi.NewWBClient(user.WbKey.String)
+		wbClient := wb.NewWBClient(user.WbKey.String)
 		isValid, err := wbClient.CheckToken()
 
 		if err != nil {
@@ -458,7 +459,7 @@ func (h *AuthHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	// 1. Проверяем авторизацию
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
-		respondWithJSON(w, http.StatusUnauthorized, entity.ErrorResponse{Error: "No authorization header"})
+		respondWithJSON(w, http.StatusUnauthorized, dto2.ErrorResponse{Error: "No authorization header"})
 		return
 	}
 
@@ -468,34 +469,34 @@ func (h *AuthHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil || !token.Valid {
-		respondWithJSON(w, http.StatusUnauthorized, entity.ErrorResponse{Error: "Invalid token"})
+		respondWithJSON(w, http.StatusUnauthorized, dto2.ErrorResponse{Error: "Invalid token"})
 		return
 	}
 
 	// 2. Получаем username из токена
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		respondWithJSON(w, http.StatusUnauthorized, entity.ErrorResponse{Error: "Invalid token claims"})
+		respondWithJSON(w, http.StatusUnauthorized, dto2.ErrorResponse{Error: "Invalid token claims"})
 		return
 	}
 
 	username, ok := claims["username"].(string)
 	if !ok {
-		respondWithJSON(w, http.StatusUnauthorized, entity.ErrorResponse{Error: "Invalid username in token"})
+		respondWithJSON(w, http.StatusUnauthorized, dto2.ErrorResponse{Error: "Invalid username in token"})
 		return
 	}
 
 	// 3. Получаем текущего пользователя
 	currentUser, err := h.authService.GetUserByUsername(username)
 	if err != nil {
-		respondWithJSON(w, http.StatusNotFound, entity.ErrorResponse{Error: "User not found"})
+		respondWithJSON(w, http.StatusNotFound, dto2.ErrorResponse{Error: "User not found"})
 		return
 	}
 
 	// 4. Парсим данные из запроса
 	var updateData map[string]interface{}
 	if err := json.NewDecoder(r.Body).Decode(&updateData); err != nil {
-		respondWithJSON(w, http.StatusBadRequest, entity.ErrorResponse{Error: "Invalid request body"})
+		respondWithJSON(w, http.StatusBadRequest, dto2.ErrorResponse{Error: "Invalid request body"})
 		return
 	}
 
@@ -524,7 +525,7 @@ func (h *AuthHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	if password, ok := updateData["password"].(string); ok && password != "" {
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 		if err != nil {
-			respondWithJSON(w, http.StatusInternalServerError, entity.ErrorResponse{Error: "Failed to hash password"})
+			respondWithJSON(w, http.StatusInternalServerError, dto2.ErrorResponse{Error: "Failed to hash password"})
 			return
 		}
 		currentUser.PasswordHash = string(hashedPassword)
@@ -534,7 +535,7 @@ func (h *AuthHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	// 8. Сохраняем в БД
 	err = h.userRepo.UpdateUser(currentUser)
 	if err != nil {
-		respondWithJSON(w, http.StatusInternalServerError, entity.ErrorResponse{Error: "Failed to save user data: " + err.Error()})
+		respondWithJSON(w, http.StatusInternalServerError, dto2.ErrorResponse{Error: "Failed to save user data: " + err.Error()})
 		return
 	}
 
@@ -549,7 +550,7 @@ func (h *AuthHandler) UpdateUserParams(w http.ResponseWriter, r *http.Request) {
 	// 1. Проверяем авторизацию
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
-		respondWithJSON(w, http.StatusUnauthorized, entity.ErrorResponse{Error: "No authorization header"})
+		respondWithJSON(w, http.StatusUnauthorized, dto2.ErrorResponse{Error: "No authorization header"})
 		return
 	}
 
@@ -559,38 +560,38 @@ func (h *AuthHandler) UpdateUserParams(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil || !token.Valid {
-		respondWithJSON(w, http.StatusUnauthorized, entity.ErrorResponse{Error: "Invalid token"})
+		respondWithJSON(w, http.StatusUnauthorized, dto2.ErrorResponse{Error: "Invalid token"})
 		return
 	}
 
 	// 2. Получаем username из токена
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		respondWithJSON(w, http.StatusUnauthorized, entity.ErrorResponse{Error: "Invalid token claims"})
+		respondWithJSON(w, http.StatusUnauthorized, dto2.ErrorResponse{Error: "Invalid token claims"})
 		return
 	}
 
 	username, ok := claims["username"].(string)
 	if !ok {
-		respondWithJSON(w, http.StatusUnauthorized, entity.ErrorResponse{Error: "Invalid username in token"})
+		respondWithJSON(w, http.StatusUnauthorized, dto2.ErrorResponse{Error: "Invalid username in token"})
 		return
 	}
 
 	// 3. Получаем текущего пользователя
 	currentUser, err := h.authService.GetUserByUsername(username)
 	if err != nil {
-		respondWithJSON(w, http.StatusNotFound, entity.ErrorResponse{Error: "User not found"})
+		respondWithJSON(w, http.StatusNotFound, dto2.ErrorResponse{Error: "User not found"})
 		return
 	}
 
 	// 4. Проверяем права администратора
 	if currentUser.Admin < 1 {
-		respondWithJSON(w, http.StatusForbidden, entity.ErrorResponse{Error: "Admin rights required"})
+		respondWithJSON(w, http.StatusForbidden, dto2.ErrorResponse{Error: "Admin rights required"})
 		return
 	}
 
 	// Парсим JSON из тела запроса
-	var req entity.UserRequest
+	var req dto2.UserRequest
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -618,7 +619,7 @@ func (h *AuthHandler) UpdateUserParams(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *AuthHandler) getUserFromRequest(r *http.Request) (*repository.User, error) {
+func (h *AuthHandler) getUserFromRequest(r *http.Request) (*user.User, error) {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
 		return nil, fmt.Errorf("no authorization header")

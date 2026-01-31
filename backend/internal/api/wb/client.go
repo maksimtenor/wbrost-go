@@ -1,4 +1,4 @@
-package wbapi
+package wb
 
 import (
 	"encoding/json"
@@ -8,15 +8,15 @@ import (
 	"time"
 )
 
-// WBClient клиент для работы с API Wildberries
-type WBClient struct {
+// Client клиент для работы с API Wildberries
+type Client struct {
 	Token  string
 	Client *http.Client
 }
 
 // NewWBClient создает новый клиент
-func NewWBClient(token string) *WBClient {
-	return &WBClient{
+func NewWBClient(token string) *Client {
+	return &Client{
 		Token: token,
 		Client: &http.Client{
 			Timeout: 10 * time.Second, // Добавляем таймаут
@@ -24,37 +24,8 @@ func NewWBClient(token string) *WBClient {
 	}
 }
 
-// PassesResponse структура для ответа проверки токена
-type PassesResponse []struct {
-	Status int         `json:"status"`
-	Data   interface{} `json:"data"`
-	Error  string      `json:"error"`
-}
-
-// WBErrorResponse Структура для ошибки WB API (401/403/429)
-type WBErrorResponse struct {
-	Status     int    `json:"status"`
-	StatusText string `json:"statusText"`
-	Code       string `json:"code"`
-	Message    string `json:"message"`
-	Detail     string `json:"detail"`
-}
-
-// Pass Структура для успешного ответа (пропуск)
-type Pass struct {
-	ID            int    `json:"id"`
-	FirstName     string `json:"firstName"`
-	LastName      string `json:"lastName"`
-	CarModel      string `json:"carModel"`
-	CarNumber     string `json:"carNumber"`
-	OfficeName    string `json:"officeName"`
-	OfficeAddress string `json:"officeAddress"`
-	OfficeID      int    `json:"officeId"`
-	DateEnd       string `json:"dateEnd"`
-}
-
 // CheckToken проверяет валидность токена через API WB
-func (c *WBClient) CheckToken() (bool, error) {
+func (c *Client) CheckToken() (bool, error) {
 	// Используем конструктор URL!
 	url := URLPasses()
 
@@ -97,7 +68,7 @@ func (c *WBClient) CheckToken() (bool, error) {
 
 	case 401, 403:
 		// Пробуем распарсить ошибку для деталей
-		var wbError WBErrorResponse
+		var wbError ErrorResponse
 		if err := json.Unmarshal(body, &wbError); err == nil {
 			return false, fmt.Errorf("токен недействителен: %s", wbError.Message)
 		}

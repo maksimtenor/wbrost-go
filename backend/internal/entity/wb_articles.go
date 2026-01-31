@@ -1,11 +1,9 @@
 package entity
 
-import (
-	"database/sql"
-)
+import "database/sql"
 
-// WBArticleDB - соответствует таблице wb_articles в БД
-type WBArticleDB struct {
+// WBArticles - соответствует таблице wb_articles в БД
+type WBArticles struct {
 	ID              int            `json:"id" db:"id"`
 	UserID          int            `json:"id_user" db:"id_user"`
 	Articule        string         `json:"articule" db:"articule"`

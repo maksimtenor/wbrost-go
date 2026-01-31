@@ -7,23 +7,25 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"wbrost-go/internal/dto"
 	"wbrost-go/internal/entity"
-	"wbrost-go/internal/repository"
+	"wbrost-go/internal/repository/article"
+	"wbrost-go/internal/repository/user"
 
 	"github.com/golang-jwt/jwt/v4"
 )
 
 type WBArticlesHandler struct {
-	userRepo        *repository.UserRepository
-	articlesGetRepo *repository.WBArticlesGetRepository
-	articleRepo     *repository.WBArticleRepository
+	userRepo        *user.UserRepository
+	articlesGetRepo *article.WBArticlesGetRepository
+	articleRepo     *article.WBArticlesRepository
 	jwtSecret       []byte
 }
 
 func NewWBArticlesHandler(
-	userRepo *repository.UserRepository,
-	articlesGetRepo *repository.WBArticlesGetRepository,
-	articleRepo *repository.WBArticleRepository,
+	userRepo *user.UserRepository,
+	articlesGetRepo *article.WBArticlesGetRepository,
+	articleRepo *article.WBArticlesRepository,
 	jwtSecret string,
 ) *WBArticlesHandler {
 	return &WBArticlesHandler{
@@ -39,7 +41,7 @@ func (h *WBArticlesHandler) GetArticles(w http.ResponseWriter, r *http.Request) 
 	// Получить пользователя по токену
 	user, err := h.getUserFromRequest(r)
 	if err != nil {
-		respondWithJSON(w, http.StatusUnauthorized, entity.ErrorResponse{Error: "Unauthorized"})
+		respondWithJSON(w, http.StatusUnauthorized, dto.ErrorResponse{Error: "Unauthorized"})
 		return
 	}
 
@@ -62,14 +64,14 @@ func (h *WBArticlesHandler) GetArticles(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	var articles []entity.WBArticleDB
+	var articles []entity.WBArticles
 	var totalCount int
 
 	if searchQuery != "" {
 		// Поиск по запросу
 		articles, err = h.articleRepo.SearchArticles(user.ID, searchQuery, page, pageSize)
 		if err != nil {
-			respondWithJSON(w, http.StatusInternalServerError, entity.ErrorResponse{
+			respondWithJSON(w, http.StatusInternalServerError, dto.ErrorResponse{
 				Error: "Failed to search articles: " + err.Error(),
 			})
 			return
@@ -80,7 +82,7 @@ func (h *WBArticlesHandler) GetArticles(w http.ResponseWriter, r *http.Request) 
 		// Получение всех карточек с пагинацией
 		articles, err = h.articleRepo.GetByUserID(user.ID, page, pageSize)
 		if err != nil {
-			respondWithJSON(w, http.StatusInternalServerError, entity.ErrorResponse{
+			respondWithJSON(w, http.StatusInternalServerError, dto.ErrorResponse{
 				Error: "Failed to get articles: " + err.Error(),
 			})
 			return
@@ -89,7 +91,7 @@ func (h *WBArticlesHandler) GetArticles(w http.ResponseWriter, r *http.Request) 
 		// Получить общее количество
 		totalCount, err = h.articleRepo.GetCountByUserID(user.ID)
 		if err != nil {
-			respondWithJSON(w, http.StatusInternalServerError, entity.ErrorResponse{
+			respondWithJSON(w, http.StatusInternalServerError, dto.ErrorResponse{
 				Error: "Failed to get total count: " + err.Error(),
 			})
 			return
@@ -153,13 +155,13 @@ func (h *WBArticlesHandler) CreateArticlesRequest(w http.ResponseWriter, r *http
 	// Получить пользователя по токену
 	user, err := h.getUserFromRequest(r)
 	if err != nil {
-		respondWithJSON(w, http.StatusUnauthorized, entity.ErrorResponse{Error: "Unauthorized"})
+		respondWithJSON(w, http.StatusUnauthorized, dto.ErrorResponse{Error: "Unauthorized"})
 		return
 	}
 
 	// Проверяем наличие WB ключа
 	if !user.WbKey.Valid || user.WbKey.String == "" {
-		respondWithJSON(w, http.StatusBadRequest, entity.ErrorResponse{
+		respondWithJSON(w, http.StatusBadRequest, dto.ErrorResponse{
 			Error: "WB ключ не указан. Добавьте ключ в настройках профиля.",
 		})
 		return
@@ -172,7 +174,7 @@ func (h *WBArticlesHandler) CreateArticlesRequest(w http.ResponseWriter, r *http
 	}
 
 	if err := h.articlesGetRepo.Create(articleRequest); err != nil {
-		respondWithJSON(w, http.StatusInternalServerError, entity.ErrorResponse{
+		respondWithJSON(w, http.StatusInternalServerError, dto.ErrorResponse{
 			Error: "Failed to create request: " + err.Error(),
 		})
 		return
@@ -193,7 +195,7 @@ func (h *WBArticlesHandler) UpdateCostPrice(w http.ResponseWriter, r *http.Reque
 	// Получить пользователя по токену
 	user, err := h.getUserFromRequest(r)
 	if err != nil {
-		respondWithJSON(w, http.StatusUnauthorized, entity.ErrorResponse{Error: "Unauthorized"})
+		respondWithJSON(w, http.StatusUnauthorized, dto.ErrorResponse{Error: "Unauthorized"})
 		return
 	}
 
@@ -204,19 +206,19 @@ func (h *WBArticlesHandler) UpdateCostPrice(w http.ResponseWriter, r *http.Reque
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondWithJSON(w, http.StatusBadRequest, entity.ErrorResponse{Error: "Invalid request body"})
+		respondWithJSON(w, http.StatusBadRequest, dto.ErrorResponse{Error: "Invalid request body"})
 		return
 	}
 
 	// Валидация
 	if req.Articule == "" {
-		respondWithJSON(w, http.StatusBadRequest, entity.ErrorResponse{Error: "Articule is required"})
+		respondWithJSON(w, http.StatusBadRequest, dto.ErrorResponse{Error: "Articule is required"})
 		return
 	}
 
 	// Обновляем себестоимость
 	if err := h.articleRepo.UpdateCostPrice(user.ID, req.Articule, req.CostPrice); err != nil {
-		respondWithJSON(w, http.StatusInternalServerError, entity.ErrorResponse{
+		respondWithJSON(w, http.StatusInternalServerError, dto.ErrorResponse{
 			Error: "Failed to update cost price: " + err.Error(),
 		})
 		return
@@ -250,7 +252,7 @@ func (h *WBArticlesHandler) generatePhotoURL(articule string) string {
 }
 
 // Вспомогательная функция для получения пользователя из JWT
-func (h *WBArticlesHandler) getUserFromRequest(r *http.Request) (*repository.User, error) {
+func (h *WBArticlesHandler) getUserFromRequest(r *http.Request) (*user.User, error) {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
 		return nil, fmt.Errorf("no authorization header")
