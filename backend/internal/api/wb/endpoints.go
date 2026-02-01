@@ -24,7 +24,6 @@ const (
 // Endpoint тип для эндпоинтов API Wildberries
 type Endpoint string
 
-// Константы эндпоинтов с типом Endpoint для type-safe использования
 const (
 	Incomes       Endpoint = EndpointIncomes
 	DetailsV1     Endpoint = EndpointDetailsV1
@@ -53,58 +52,6 @@ func URLFor(endpoint Endpoint) string {
 		// fallback на основной stats URL
 		return BaseURLStats + string(endpoint)
 	}
-}
-
-// Конкретные методы для удобства и обратной совместимости
-
-// URLIncomes возвращает URL для получения поставок
-func URLIncomes() string {
-	return BaseURLStats + EndpointIncomes
-}
-
-// URLDetailsV1 возвращает URL для детального отчета v1
-func URLDetailsV1() string {
-	return BaseURLStats + EndpointDetailsV1
-}
-
-// URLDetailsV5 возвращает URL для детального отчета v5
-func URLDetailsV5() string {
-	return BaseURLStatsNew + EndpointDetailsV5
-}
-
-// URLOrders возвращает URL для получения заказов
-func URLOrders() string {
-	return BaseURLStats + EndpointOrders
-}
-
-// URLTaskCreate возвращает URL для создания задачи
-func URLTaskCreate() string {
-	return BaseURLStats + EndpointTaskCreate
-}
-
-// URLTaskStatus возвращает URL для проверки статуса задачи
-func URLTaskStatus() string {
-	return BaseURLStats + EndpointTaskStatus
-}
-
-// URLTaskDownload возвращает URL для скачивания задачи
-func URLTaskDownload() string {
-	return BaseURLStats + EndpointTaskDownload
-}
-
-// URLCardsList возвращает URL для получения списка карточек
-func URLCardsList() string {
-	return BaseURLCard + EndpointCardsList
-}
-
-// URLDetailHistory возвращает URL для истории детального отчета
-func URLDetailHistory() string {
-	return BaseURLCard + EndpointDetailHistory
-}
-
-// URLPasses возвращает URL для проверки токена
-func URLPasses() string {
-	return BaseURLMarketplace + EndpointPasses
 }
 
 // BaseURLs возвращает все базовые URL в виде map

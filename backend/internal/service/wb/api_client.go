@@ -10,10 +10,9 @@ import (
 	"time"
 	"wbrost-go/internal/api/wb"
 	"wbrost-go/internal/entity"
-	"wbrost-go/internal/repository/user"
 )
 
-func (s *WBService) getWBData(order *entity.WBStatsGet, user *user.User) ([]interface{}, error) {
+func (s *WBService) getWBData(order *entity.WBStatsGet, user *entity.Users) ([]interface{}, error) {
 	if !user.WbKey.Valid || user.WbKey.String == "" {
 		return nil, fmt.Errorf("токен WB не указан для пользователя %d", user.ID)
 	}

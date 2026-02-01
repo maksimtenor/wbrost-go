@@ -24,11 +24,11 @@ func NewAuthService(userRepo *user.UserRepository) *AuthService {
 	return &AuthService{userRepo: userRepo}
 }
 
-func (s *AuthService) GetUserByUsername(username string) (*user.User, error) {
+func (s *AuthService) GetUserByUsername(username string) (*entity.Users, error) {
 	return s.userRepo.GetByUsername(username)
 }
 
-func (s *AuthService) GetUserByUserId(userId int) (*user.User, error) {
+func (s *AuthService) GetUserByUserId(userId int) (*entity.Users, error) {
 	return s.userRepo.GetByUserId(userId)
 }
 
@@ -36,8 +36,8 @@ func (s *AuthService) GetAllUsers(page, pageSize int) ([]entity.Users, error) {
 	return s.userRepo.GetAll(page, pageSize)
 }
 
-func (s *AuthService) CreateUser(dto CreateUserDTO) (*user.User, error) {
-	user := &user.User{
+func (s *AuthService) CreateUser(dto CreateUserDTO) (*entity.Users, error) {
+	user := &entity.Users{
 		Username:        dto.Username,
 		PasswordHash:    dto.PasswordHash,
 		Email:           sql.NullString{String: dto.Email, Valid: true},

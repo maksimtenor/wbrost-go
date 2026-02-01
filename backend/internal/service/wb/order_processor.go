@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 	"wbrost-go/internal/entity"
-	"wbrost-go/internal/repository/user"
 )
 
 // ProcessPendingOrders обрабатывает все ожидающие заказы
@@ -65,7 +64,7 @@ func (s *WBService) updateOrderStatus(order *entity.WBStatsGet, status int, erro
 	}
 }
 
-func (s *WBService) processOrder(order *entity.WBStatsGet, user *user.User) ProcessResult {
+func (s *WBService) processOrder(order *entity.WBStatsGet, user *entity.Users) ProcessResult {
 	// Получаем данные от WB API
 	reportData, err := s.getWBData(order, user)
 	if err != nil {

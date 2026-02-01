@@ -18,6 +18,14 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+const (
+	Zero        = 0
+	PageSize    = 10
+	MaxPageSize = 100
+	PageNum     = 1
+	HoursEurope = 24
+)
+
 type AuthHandler struct {
 	authService *auth.AuthService
 	userRepo    *user.UserRepository
@@ -39,7 +47,7 @@ func (h *AuthHandler) GetUsersList(w http.ResponseWriter, r *http.Request) {
 		respondWithJSON(w, http.StatusUnauthorized, dto2.ErrorResponse{Error: "Unauthorized"})
 		return
 	}
-	if userCheck.Admin < 1 {
+	if userCheck.Admin < entity.UserAdmin {
 		respondWithJSON(w, http.StatusForbidden, dto2.ErrorResponse{Error: "Вам сюда нельзя!"})
 		return
 	}
@@ -47,16 +55,16 @@ func (h *AuthHandler) GetUsersList(w http.ResponseWriter, r *http.Request) {
 	pageStr := r.URL.Query().Get("page")
 	pageSizeStr := r.URL.Query().Get("pageSize")
 
-	page := 1
+	page := PageNum
 	if pageStr != "" {
-		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > Zero {
 			page = p
 		}
 	}
 
-	pageSize := 10 // По умолчанию
+	pageSize := PageSize // По умолчанию
 	if pageSizeStr != "" {
-		if ps, err := strconv.Atoi(pageSizeStr); err == nil && ps > 0 && ps <= 100 {
+		if ps, err := strconv.Atoi(pageSizeStr); err == nil && ps > Zero && ps <= MaxPageSize {
 			pageSize = ps
 		}
 	}
@@ -99,7 +107,7 @@ func (h *AuthHandler) GetUsersList(w http.ResponseWriter, r *http.Request) {
 			"id":          user.ID,
 			"taxes":       user.Taxes,
 			"username":    user.Username,
-			"password":    user.Password,
+			"password":    user.PasswordHash,
 			"email":       user.Email,
 			"admin":       user.Admin,
 			"block":       user.Block,
@@ -166,7 +174,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id":  user.ID,
 		"username": user.Username,
-		"exp":      time.Now().Add(24 * time.Hour).Unix(),
+		"exp":      time.Now().Add(HoursEurope * time.Hour).Unix(),
 	})
 
 	tokenString, err := token.SignedString(h.jwtSecret)
@@ -224,7 +232,7 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 		validationErrors["password"] = "Password must be at least 6 characters"
 	}
 
-	if len(validationErrors) > 0 {
+	if len(validationErrors) > Zero {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(dto2.ValidationErrors{Errors: validationErrors})
@@ -244,8 +252,8 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 		Username:     req.Username,
 		Email:        req.Email,
 		PasswordHash: string(hashedPassword),
-		Pro:          0, // По умолчанию не активирован Pro
-		Admin:        0, // По умолчанию не админ
+		Pro:          entity.UserTrial,    // По умолчанию не активирован Pro
+		Admin:        entity.WithoutAdmin, // По умолчанию не админ
 	})
 
 	if err != nil {
@@ -259,7 +267,7 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if len(validationErrors) > 0 {
+		if len(validationErrors) > Zero {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
 			json.NewEncoder(w).Encode(dto2.ValidationErrors{Errors: validationErrors})
@@ -271,7 +279,7 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id":  user.ID,
 		"username": user.Username,
-		"exp":      time.Now().Add(24 * time.Hour).Unix(),
+		"exp":      time.Now().Add(HoursEurope * time.Hour).Unix(),
 	})
 
 	tokenString, err := token.SignedString(h.jwtSecret)
@@ -600,7 +608,7 @@ func (h *AuthHandler) UpdateUserParams(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	// Проверяем обязательные поля
-	if req.UserId == 0 || req.ActionType == "" {
+	if req.UserId == Zero || req.ActionType == "" {
 		http.Error(w, "Missing required fields", http.StatusBadRequest)
 		return
 	}
@@ -619,7 +627,7 @@ func (h *AuthHandler) UpdateUserParams(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *AuthHandler) getUserFromRequest(r *http.Request) (*user.User, error) {
+func (h *AuthHandler) getUserFromRequest(r *http.Request) (*entity.Users, error) {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
 		return nil, fmt.Errorf("no authorization header")

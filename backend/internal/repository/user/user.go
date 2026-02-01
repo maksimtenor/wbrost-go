@@ -8,28 +8,6 @@ import (
 	"wbrost-go/internal/repository/database/postgres"
 )
 
-// User - модель для работы с таблицей users
-type User struct {
-	ID              int            `db:"id_user"`
-	Taxes           int            `db:"taxes"`
-	Username        string         `db:"username"`
-	PasswordHash    string         `db:"password"` // В таблице поле password
-	Email           sql.NullString `db:"email"`    // Email может быть NULL
-	Admin           int            `db:"admin"`
-	Block           int            `db:"block"`
-	Pro             int            `db:"pro"`  // В таблице поле pro (int), а не pro_account (string)
-	Name            sql.NullString `db:"name"` // Name может быть NULL
-	Phone           sql.NullString `db:"phone"`
-	WbKey           sql.NullString `db:"wb_key"`
-	OzonKey         sql.NullString `db:"ozon_key"`
-	U2782212Wbrosus int            `db:"u2782212_wbrosus"`
-	OzonStatus      int            `db:"ozon_status"`
-	CreatedAt       time.Time      `db:"created_at"`
-	UpdatedAt       time.Time      `db:"updated_at"`
-	Del             int            `db:"del"`
-	LastLogin       time.Time      `db:"last_login"`
-}
-
 type UserRepository struct {
 	db *postgres.PostgresDB
 }
@@ -67,7 +45,7 @@ LIMIT $1 OFFSET $2`
 			&a.ID,
 			&a.Taxes,
 			&a.Username,
-			&a.Password,
+			&a.PasswordHash,
 			&a.Email,
 			&a.Admin,
 			&a.Block,
@@ -92,7 +70,7 @@ LIMIT $1 OFFSET $2`
 	return users, nil
 }
 
-func (r *UserRepository) GetByUsername(username string) (*User, error) {
+func (r *UserRepository) GetByUsername(username string) (*entity.Users, error) {
 	query := `SELECT 
         id_user, taxes, username, password, email, admin, block, pro, 
         name, phone, wb_key, ozon_key, u2782212_wbrosus, ozon_status,
@@ -102,7 +80,7 @@ func (r *UserRepository) GetByUsername(username string) (*User, error) {
 
 	row := r.db.QueryRow(query, username)
 
-	var user User
+	var user entity.Users
 
 	err := row.Scan(
 		&user.ID,
@@ -135,7 +113,7 @@ func (r *UserRepository) GetByUsername(username string) (*User, error) {
 	return &user, nil
 }
 
-func (r *UserRepository) GetByUserId(userId int) (*User, error) {
+func (r *UserRepository) GetByUserId(userId int) (*entity.Users, error) {
 	query := `SELECT 
         id_user, taxes, username, password, email, admin, block, pro, 
         name, phone, wb_key, ozon_key, u2782212_wbrosus, ozon_status,
@@ -145,7 +123,7 @@ func (r *UserRepository) GetByUserId(userId int) (*User, error) {
 
 	row := r.db.QueryRow(query, userId)
 
-	var user User
+	var user entity.Users
 
 	err := row.Scan(
 		&user.ID,
@@ -230,7 +208,7 @@ func (r *UserRepository) UpdateUserDel(userId, value int) error {
 	return err
 }
 
-func (r *UserRepository) GetByEmail(email string) (*User, error) {
+func (r *UserRepository) GetByEmail(email string) (*entity.Users, error) {
 	query := `SELECT 
         id_user, taxes, username, password, email, admin, block, pro, 
         name, phone, wb_key, ozon_key, u2782212_wbrosus, ozon_status,
@@ -240,7 +218,7 @@ func (r *UserRepository) GetByEmail(email string) (*User, error) {
 
 	row := r.db.QueryRow(query, email)
 
-	var user User
+	var user entity.Users
 
 	err := row.Scan(
 		&user.ID,
@@ -273,7 +251,7 @@ func (r *UserRepository) GetByEmail(email string) (*User, error) {
 	return &user, nil
 }
 
-func (r *UserRepository) Create(user *User) (*User, error) {
+func (r *UserRepository) Create(user *entity.Users) (*entity.Users, error) {
 	// Проверяем существование username
 	existingUser, _ := r.GetByUsername(user.Username)
 	if existingUser != nil {
@@ -339,11 +317,11 @@ func (r *UserRepository) Create(user *User) (*User, error) {
 	return user, nil
 }
 
-func (r *UserRepository) GetByID(id int) (*User, error) {
+func (r *UserRepository) GetByID(id int) (*entity.Users, error) {
 	query := `SELECT * FROM users WHERE id_user = $1`
 	row := r.db.QueryRow(query, id)
 
-	var user User
+	var user entity.Users
 	err := row.Scan(
 		&user.ID,
 		&user.Taxes,
@@ -370,7 +348,7 @@ func (r *UserRepository) GetByID(id int) (*User, error) {
 	}
 	return &user, nil
 }
-func (r *UserRepository) UpdateUser(user *User) error {
+func (r *UserRepository) UpdateUser(user *entity.Users) error {
 	query := `
         UPDATE users 
         SET 

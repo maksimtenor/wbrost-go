@@ -44,6 +44,7 @@ v2.0.0     - Ломающие изменения
 
 ### На будущее - (пример) крон на запуск воркера по запросу статы
 ```bash
+DTO (Data Transfer Object — объект переноса данных) 
 # Запускать каждые 5 минут
 */5 * * * * root cd /var/www/wbrost-go/backend && /usr/local/go/bin/go run cmd/worker/main.go --once >> /var/log/wbrost-worker.log 2>&1
 ```

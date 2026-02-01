@@ -225,7 +225,7 @@ func (h *WBStatsHandler) CreateWBReport(w http.ResponseWriter, r *http.Request) 
 }
 
 // Асинхронная функция для получения данных из WB.
-func (h *WBStatsHandler) fetchWBDataAsync(reportID int, user *user.User, dateFrom, dateTo string) {
+func (h *WBStatsHandler) fetchWBDataAsync(reportID int, user *entity.Users, dateFrom, dateTo string) {
 	// Здесь следует реализовать фактический вызов API WB
 	// Пока что, имитируем обработку
 
@@ -303,7 +303,7 @@ func (h *WBStatsHandler) GetDashboardStats(w http.ResponseWriter, r *http.Reques
 }
 
 // Вспомогательная функция для получения пользователя из JWT-токена.
-func (h *WBStatsHandler) getUserFromRequest(r *http.Request) (*user.User, error) {
+func (h *WBStatsHandler) getUserFromRequest(r *http.Request) (*entity.Users, error) {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
 		return nil, fmt.Errorf("no authorization header")

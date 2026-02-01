@@ -19,7 +19,7 @@ func NewWBClient(token string) *Client {
 	return &Client{
 		Token: token,
 		Client: &http.Client{
-			Timeout: 10 * time.Second, // Добавляем таймаут
+			Timeout: 10 * time.Second,
 		},
 	}
 }
@@ -27,7 +27,7 @@ func NewWBClient(token string) *Client {
 // CheckToken проверяет валидность токена через API WB
 func (c *Client) CheckToken() (bool, error) {
 	// Используем конструктор URL!
-	url := URLPasses()
+	url := URLFor(Passes)
 
 	// Создаем запрос
 	req, err := http.NewRequest("GET", url, nil)
@@ -35,18 +35,15 @@ func (c *Client) CheckToken() (bool, error) {
 		return false, fmt.Errorf("ошибка создания запроса: %v", err)
 	}
 
-	// Добавляем заголовки как в PHP
 	req.Header.Set("Authorization", c.Token)
 	req.Header.Set("Content-Type", "application/json")
 
-	// Выполняем запрос
 	resp, err := c.Client.Do(req)
 	if err != nil {
 		return false, fmt.Errorf("ошибка сети: %v", err)
 	}
 	defer resp.Body.Close()
 
-	// Читаем ответ
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return false, fmt.Errorf("ошибка чтения ответа: %v", err)
@@ -64,7 +61,7 @@ func (c *Client) CheckToken() (bool, error) {
 			// Если не массив пропусков, но статус 200 - всё равно валиден
 			return true, nil
 		}
-		return true, nil // Токен валиден
+		return true, nil
 
 	case 401, 403:
 		// Пробуем распарсить ошибку для деталей
@@ -72,7 +69,7 @@ func (c *Client) CheckToken() (bool, error) {
 		if err := json.Unmarshal(body, &wbError); err == nil {
 			return false, fmt.Errorf("токен недействителен: %s", wbError.Message)
 		}
-		return false, nil // Токен невалиден
+		return false, nil
 
 	case 429:
 		return false, fmt.Errorf("лимит запросов к WB API. Подождите")

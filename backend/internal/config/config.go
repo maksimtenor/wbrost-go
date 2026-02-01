@@ -1,9 +1,7 @@
 package config
 
 import (
-	"fmt"
 	"os"
-	"strconv"
 )
 
 type Config struct {
@@ -19,16 +17,14 @@ type Config struct {
 }
 
 type WorkerConfig struct {
-	Interval         int // Интервал в секундах для статистики
-	ArticlesInterval int // Интервал в секундах для карточек товаров
+	Interval         int // Интервал опроса на новые события в секундах для статистики
+	ArticlesInterval int // Интервал опроса на новые события в секундах для карточек товаров
 }
 
 func Load() *Config {
-	// Читаем переменные окружения
 	dbPort := getEnv("DB_PORT", "")
 	serverPort := getEnv("SERVER_PORT", "")
 
-	// Определяем origins в зависимости от окружения
 	allowedOrigins := []string{
 		"http://localhost:3000",
 		"http://localhost:3001",
@@ -37,9 +33,9 @@ func Load() *Config {
 	}
 
 	// Если в окружении заданы доп origins
-	//if extraOrigins := os.Getenv("ALLOWED_ORIGINS"); extraOrigins != "" {
-	//	allowedOrigins = append(allowedOrigins, extraOrigins)
-	//}
+	if extraOrigins := os.Getenv("ALLOWED_ORIGINS"); extraOrigins != "" {
+		allowedOrigins = append(allowedOrigins, extraOrigins)
+	}
 
 	return &Config{
 		DBHost:         getEnv("DB_HOST", "localhost"),
@@ -55,26 +51,4 @@ func Load() *Config {
 			ArticlesInterval: getEnvAsInt("WORKER_ARTICLES_INTERVAL", 60),
 		},
 	}
-}
-
-// GetDBConnectionString - строка подключения к бд (постгря)
-func (c *Config) GetDBConnectionString() string {
-	return fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		c.DBHost, c.DBPort, c.DBUser, c.DBPassword, c.DBName)
-}
-
-func getEnv(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
-}
-
-func getEnvAsInt(key string, defaultValue int) int {
-	if value := os.Getenv(key); value != "" {
-		if intValue, err := strconv.Atoi(value); err == nil {
-			return intValue
-		}
-	}
-	return defaultValue
 }

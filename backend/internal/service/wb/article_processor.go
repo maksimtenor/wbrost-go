@@ -11,7 +11,6 @@ import (
 	"time"
 	"wbrost-go/internal/api/wb"
 	"wbrost-go/internal/entity"
-	"wbrost-go/internal/repository/user"
 )
 
 // ProcessPendingArticles обрабатывает все ожидающие запросы на получение карточек
@@ -41,7 +40,7 @@ func (s *WBService) ProcessPendingArticles() error {
 		}
 
 		// Обрабатываем запрос
-		result := s.processArticleRequest(&articleReq, user)
+		result := s.processArticleRequest(user)
 
 		if result.Status {
 			s.updateArticleStatus(&articleReq, entity.ArticlesStatusSuccess, result.Error)
@@ -66,7 +65,7 @@ func (s *WBService) updateArticleStatus(article *entity.WBArticlesGet, status in
 	}
 }
 
-func (s *WBService) processArticleRequest(articleReq *entity.WBArticlesGet, user *user.User) ProcessResult {
+func (s *WBService) processArticleRequest(user *entity.Users) ProcessResult {
 	// Получаем данные карточек от WB API
 	articlesData, err := s.getWBArticles(user)
 	if err != nil {
@@ -87,7 +86,7 @@ func (s *WBService) processArticleRequest(articleReq *entity.WBArticlesGet, user
 	}
 }
 
-func (s *WBService) getWBArticles(user *user.User) ([]wb.Article, error) {
+func (s *WBService) getWBArticles(user *entity.Users) ([]wb.Article, error) {
 	if !user.WbKey.Valid || user.WbKey.String == "" {
 		return nil, fmt.Errorf("токен WB не указан для пользователя %d", user.ID)
 	}
@@ -143,7 +142,7 @@ func (s *WBService) fetchArticlesFromWB(client *wb.Client) ([]wb.Article, error)
 			return nil, fmt.Errorf("failed to marshal request body: %w", err)
 		}
 
-		url := wb.URLCardsList()
+		url := wb.URLFor(wb.CardsList)
 		req, err := http.NewRequest("POST", url, strings.NewReader(string(jsonBody)))
 		if err != nil {
 			return nil, fmt.Errorf("failed to create request: %w", err)

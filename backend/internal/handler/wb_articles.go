@@ -180,9 +180,6 @@ func (h *WBArticlesHandler) CreateArticlesRequest(w http.ResponseWriter, r *http
 		return
 	}
 
-	// Запускаем асинхронную обработку
-	// go h.fetchArticlesAsync(articleRequest.ID, user)
-
 	respondWithJSON(w, http.StatusOK, map[string]interface{}{
 		"id":      articleRequest.ID,
 		"success": true,
@@ -252,7 +249,7 @@ func (h *WBArticlesHandler) generatePhotoURL(articule string) string {
 }
 
 // Вспомогательная функция для получения пользователя из JWT
-func (h *WBArticlesHandler) getUserFromRequest(r *http.Request) (*user.User, error) {
+func (h *WBArticlesHandler) getUserFromRequest(r *http.Request) (*entity.Users, error) {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
 		return nil, fmt.Errorf("no authorization header")
