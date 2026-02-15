@@ -22,8 +22,8 @@ type WorkerConfig struct {
 }
 
 func Load() *Config {
-	dbPort := getEnv("DB_PORT", "")
-	serverPort := getEnv("SERVER_PORT", "")
+	dbPort := os.Getenv("DB_PORT")
+	serverPort := os.Getenv("SERVER_PORT")
 
 	allowedOrigins := []string{
 		"http://localhost:3000",
@@ -38,13 +38,13 @@ func Load() *Config {
 	}
 
 	return &Config{
-		DBHost:         getEnv("DB_HOST", "localhost"),
+		DBHost:         os.Getenv("DB_HOST"),
 		DBPort:         dbPort,
-		DBUser:         getEnv("DB_USER", "postgres"),
-		DBPassword:     getEnv("DB_PASSWORD", "123123123"),
-		DBName:         getEnv("DB_NAME", "wbrost_go"),
+		DBUser:         os.Getenv("DB_USER"),
+		DBPassword:     os.Getenv("DB_PASSWORD"),
+		DBName:         os.Getenv("DB_NAME"),
 		ServerPort:     serverPort,
-		JWTSecret:      getEnv("JWT_SECRET", "your-secret-key"),
+		JWTSecret:      os.Getenv("JWT_SECRET"),
 		AllowedOrigins: allowedOrigins,
 		Worker: WorkerConfig{
 			Interval:         getEnvAsInt("WORKER_INTERVAL", 60),

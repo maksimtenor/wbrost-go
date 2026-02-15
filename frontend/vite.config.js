@@ -2,7 +2,7 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
 const BASE_API_URL = process.env.VITE_BASE_API_URL // базовый урл для vite конфига (с 8080 портом)
-const BASE_FRONTEND_PORT = process.env.VITE_BASE_FRONTEND_PORT // базовый урл для vite конфига (с 8080 портом)
+const BASE_FRONTEND_PORT = process.env.VITE_BASE_FRONTEND_PORT // базовый урл для vite конфига (с 3000 портом)
 
 export default defineConfig({
     plugins: [vue()],
