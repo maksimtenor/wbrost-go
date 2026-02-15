@@ -1,14 +1,14 @@
 # docker-compose.yml
 services:
   # База данных
-  postgres:
+  postgres_wbrost:
     image: postgres:18-alpine
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 123123123
       POSTGRES_DB: wbrost_go
     ports:
-      - "5433:5432"
+      - "5434:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -26,7 +26,7 @@ services:
     ports:
       - "8081:8080"
     depends_on:
-      postgres:
+      postgres_wbrost:
         condition: service_healthy  # Ждем пока БД не станет здоровой
     environment:
       SERVER_PORT: "8080"
@@ -63,10 +63,10 @@ services:
       context: .
       dockerfile: docker/backend/Dockerfile
     depends_on:
-      postgres:
+      postgres_wbrost:
         condition: service_healthy
     environment:
-      DB_HOST: postgres
+      DB_HOST: postgres_wbrost
       DB_PORT: 5432
       DB_USER: postgres
       DB_PASSWORD: 123123123
@@ -82,10 +82,10 @@ services:
       context: .
       dockerfile: docker/backend/Dockerfile
     depends_on:
-      postgres:
+      postgres_wbrost:
         condition: service_healthy
     environment:
-      DB_HOST: postgres
+      DB_HOST: postgres_wbrost
       DB_PORT: 5432
       DB_USER: postgres
       DB_PASSWORD: 123123123
